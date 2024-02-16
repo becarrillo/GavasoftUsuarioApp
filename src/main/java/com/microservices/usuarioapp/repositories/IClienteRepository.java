@@ -7,13 +7,11 @@ import java.util.List;
 @Repository
 public interface IClienteRepository {
     int save(Cliente cliente);
-    List<Cliente> listAll();
-    Short findOne(String numDocumento);
+    Short getUsuarioId(String numDocumento);
+    Cliente findOne(String numDocumento);
     Cliente findOneByUsuarioId(Short usuarioId);
-
     Short findUsuarioClienteIdByNumDocumento(String numDocumento);
-    short updateByUsuarioId(String numDocumento, Cliente cliente);
+    List<Cliente> listAll();
+    short updateByUsuario(String numDocumento, Cliente cliente);
     short deleteByUsuarioId(Short usuarioId);
-
-    byte convertToByteIsAuthorizacionDatos(boolean autorizacionDatos);
 }

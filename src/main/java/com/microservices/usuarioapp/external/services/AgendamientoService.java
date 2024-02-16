@@ -21,26 +21,27 @@ public class AgendamientoService {
         para la comunicación desde el presente proyecto
     */
     public Agendamiento save(Agendamiento agendamiento) {
-        Agendamiento newAgendamiento;
-        newAgendamiento = restTemplate.postForObject(
-            "http://AGENDAMIENTO-APP/agendamientos/agregar/nuevo",
-            agendamiento,
-            Agendamiento.class
-        );
-        return newAgendamiento;
+        if (iClienteRepository.listAll().stream().anyMatch(c -> c.getUsuario_id().equals(agendamiento.getUsuarioClienteId()))) {
+            Agendamiento newAgendamiento;
+            newAgendamiento = restTemplate.postForObject(
+                    "http://AGENDAMIENTO-APP/agendamientos/agregar/nuevo",
+                    agendamiento,
+                    Agendamiento.class
+            );
+            return newAgendamiento;
+        }
+        return null;
     }
 
-    @SuppressWarnings("unchecked")
     public List<Agendamiento> listAll() {
         return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos", List.class);
     }
-
     /* Busca obtener del proyecto Agendamiento todos aquellos que son pagos de un determinado
        cliente por su número de documento, haciendo un mapeo en los dos gestores de bases de
        datos en cada uno de los microservicios (el de los usuarios y el de los agendamientos)
     */
     @SuppressWarnings("unchecked")
-    public List<Agendamiento> listClienteAgendamientos(String numDocumento) {
+    public List<Agendamiento> listByUsuarioClienteId(String numDocumento) {
         final Short usuarioClienteId = iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
 
         return restTemplate.getForObject(
@@ -48,6 +49,11 @@ public class AgendamientoService {
                 List.class,
                 usuarioClienteId
         );
+    }
+
+    public Agendamiento updateOne(Agendamiento agendamiento) {
+        final String agendamientoId = agendamiento.getAgendamientoId();
+        return restTemplate.postForObject("http://AGENDAMIENTO-APP/agendamientos/modificar/{agendamientoId}", agendamiento, Agendamiento.class, agendamientoId);
     }
 
     public String cancelOneById(String agendamientoId) {

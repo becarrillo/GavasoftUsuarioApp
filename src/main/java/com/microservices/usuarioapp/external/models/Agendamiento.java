@@ -1,11 +1,13 @@
 package com.microservices.usuarioapp.external.models;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class Agendamiento {
     private String agendamientoId;
     private LocalDateTime fechaHora;

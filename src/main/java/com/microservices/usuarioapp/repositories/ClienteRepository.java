@@ -2,6 +2,7 @@ package com.microservices.usuarioapp.repositories;
 
 import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Usuario;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,13 +22,18 @@ public class ClienteRepository implements IClienteRepository {
 
     @Override
     public int save(Cliente cliente) {
-        cliente.setRol("cliente");
+        cliente.setRol("cliente");    // El rol agregado manualmente a la instancia para no persistirla con rol NULL por defecto
+
+        byte isAuthDatosAsByte;
+        if (cliente.isAutorizacion_datos()) {
+            isAuthDatosAsByte = 1;
+        } else { isAuthDatosAsByte = 0; }
 
         String SQL;
         SQL = "IF ? != 0 INSERT into dbo.usuarios VALUES(?,?,?,?,?,?)";
         jdbcTemplate.update(
                 SQL,
-                this.convertToByteIsAuthorizacionDatos(cliente.isAutorizacion_datos()),
+                isAuthDatosAsByte,
                 cliente.getApellidos(),
                 cliente.getNombre(),
                 cliente.getEmail(),
@@ -36,44 +42,34 @@ public class ClienteRepository implements IClienteRepository {
                 cliente.getTel()
         );
 
-        // Podríamos guardar instancia de cliente pero sin el usuario_empleado_id, lo que no es perimitido ya que es un campo NOT NULL
-        SQL = "SELECT * FROM dbo.usuarios WHERE tel=? AND nombre=? AND apellidos=?";
+        // Podríamos guardar instancia de cliente pero sin el usuario_id, lo que no es perimitido ya que es un campo NOT NULL
+        SQL = "SELECT * FROM dbo.usuarios WHERE email=?";
         final Usuario clienteUsuario = jdbcTemplate.queryForObject(
                 SQL,
                 BeanPropertyRowMapper.newInstance(Usuario.class),
-                cliente.getTel(),
-                cliente.getNombre(),
-                cliente.getApellidos()
+                cliente.getEmail()
         );
         assert clienteUsuario != null;
-
-        // Actualizamos la instancia cliente dando valores a los campos usuario_cliente_id y fecha_hora_registro
-        cliente.setUsuario_cliente_id(clienteUsuario.getUsuario_id());
         cliente.setFecha_hora_registro(LocalDateTime.now(ZoneId.of("GMT-5")));  // Hora local (Bogotá) en tiempo real (Timestamp)
 
         // Se persisten los datos de la tabla clientes y se obtiene el número de filas creadas (por defecto es 1 el valor)
-        SQL = "IF ? != 0 INSERT INTO dbo.clientes VALUES (?,?,?,?,?,?,?,?,?)";
+        SQL = "IF ? != 0 INSERT INTO dbo.clientes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
         return jdbcTemplate.update(
                 SQL,
-                this.convertToByteIsAuthorizacionDatos(cliente.isAutorizacion_datos()),
-                cliente.getUsuario_cliente_id(),
+                isAuthDatosAsByte,
+                clienteUsuario.getUsuario_id(),
                 clienteUsuario.getApellidos(),
                 clienteUsuario.getNombre(),
+                clienteUsuario.getEmail(),
+                clienteUsuario.getPassword(),
+                clienteUsuario.getRol(),
                 clienteUsuario.getTel(),
                 cliente.getTipo_documento(),
                 cliente.getNum_documento(),
-                this.convertToByteIsAuthorizacionDatos(cliente.isAutorizacion_datos()),
+                isAuthDatosAsByte,
                 cliente.getSaldo_favor(),
                 cliente.getFecha_hora_registro()
         );
-    }
-
-    @Override
-    public byte convertToByteIsAuthorizacionDatos(boolean autorizacionDatos) {
-        if (!autorizacionDatos) {
-            return 0;
-        }
-        return 1;
     }
 
     @Override
@@ -83,14 +79,30 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
-    public Short findOne(String numDocumento) {
-        final String SQL = "SELECT usuario_cliente_id from dbo.clientes WHERE num_documento=?";
+    public Short getUsuarioId(String numDocumento) {
+        final String SQL = "SELECT usuario_id from dbo.clientes WHERE num_documento=?";
         return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Short.class), numDocumento);
     }
 
     @Override
+    public Cliente findOne(String numDocumento) {
+        final String SQL = "SELECT * from dbo.clientes WHERE num_documento=?";
+        final Cliente bodyRes;
+        try {
+            bodyRes =  jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class), numDocumento);
+        } catch (Exception ex) {
+            throw ex;
+        }
+
+        // Todos los objetos de clientes en BD deben estar con autorizacion_datos=1, traduce que el cliente autorizó
+        assert bodyRes != null;
+        bodyRes.setAutorizacion_datos(true);
+        return bodyRes;
+    }
+
+    @Override
     public Cliente findOneByUsuarioId(Short usuarioId) {
-        final String SQL = "SELECT * from dbo.clientes WHERE usuario_cliente_id=?";
+        final String SQL = "SELECT * from dbo.clientes WHERE usuario_id=?";
         return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class), usuarioId.toString());
     }
 
@@ -103,7 +115,7 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
-    public short updateByUsuarioId(String numDocumento, Cliente cliente) {
+    public short updateByUsuario(String numDocumento, Cliente cliente) {
         final String SQL = "UPDATE dbo.clientes SET cliente_apellidos=?, cliente_nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, autorizacion_datos=?, saldo_favor=? WHERE num_documento=?";
         return (short) jdbcTemplate.update(
                 SQL,

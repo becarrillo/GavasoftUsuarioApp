@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 
 /**
@@ -36,28 +35,26 @@ public class EmpleadoRepository implements IEmpleadoRepository {
                 empleado.getTel()
         );
 
-        // Podríamos guardar instancia de empleado pero sin el usuario_empleado_id, lo que no es perimitido ya que es un campo NOT NULL
-        SQL = "SELECT * FROM dbo.usuarios WHERE tel=? AND nombre=? AND apellidos=?";           // entonces hacemos la consulta que nos ayuda a recuperarlo
+        // Podríamos guardar instancia de empleado pero sin el usuario_id, lo que no es perimitido ya que es un campo NOT NULL
+        SQL = "SELECT * FROM dbo.usuarios WHERE email=?";           // entonces hacemos la consulta que nos ayuda a recuperarlo
         final Usuario empleadoUsuario = jdbcTemplate.queryForObject(
                 SQL,
                 BeanPropertyRowMapper.newInstance(Usuario.class),
-                empleado.getTel(),
-                empleado.getNombre(),
-                empleado.getApellidos()
+                empleado.getEmail()
         );
         assert empleadoUsuario != null;
 
-        // Actualizamos el campo usuario_empleado_id de la tabla empleados, le damos el valor respectivo desde usuarios (usuario_id)
-        empleado.setUsuario_empleado_id(empleadoUsuario.getUsuario_id());
-
         // Se persisten los datos de la tabla empleados y se obtiene el número de filas creadas (por defecto es 1 el valor)
-        SQL = "IF ? NOT IN (SELECT url_fotografia FROM dbo.empleados) INSERT INTO dbo.empleados VALUES (?,?,?,?,?,?,?,?,?)";
+        SQL = "IF ? NOT IN (SELECT url_fotografia FROM dbo.empleados) INSERT INTO dbo.empleados VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
         return (short) jdbcTemplate.update(
                 SQL,
                 empleado.getUrl_fotografia(),
-                empleado.getUsuario_empleado_id(),
+                empleado.getUsuario_id(),
                 empleadoUsuario.getApellidos(),
                 empleadoUsuario.getNombre(),
+                empleadoUsuario.getEmail(),
+                empleadoUsuario.getPassword(),
+                empleadoUsuario.getRol(),
                 empleadoUsuario.getTel(),
                 empleado.getTipo_documento(),
                 empleado.getNum_documento(),
@@ -107,7 +104,7 @@ public class EmpleadoRepository implements IEmpleadoRepository {
     @Override
     public short updateByUsuarioId(short usuarioId, Empleado empleado) {
         final String SQL;
-        SQL = "UPDATE dbo.empleados SET apellidos=?, nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, url_fotografia=?, fecha_entrada=?, fecha_retiro=?";
+        SQL = "UPDATE dbo.empleados SET apellidos=?, nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, url_fotografia=?, fecha_entrada=?, fecha_retiro=? WHERE usuario_id=?";
         return (short) jdbcTemplate.update(
                 SQL,
                 empleado.getApellidos(),
@@ -120,7 +117,8 @@ public class EmpleadoRepository implements IEmpleadoRepository {
                 empleado.getNum_documento(),
                 empleado.getUrl_fotografia(),
                 empleado.getFecha_entrada(),
-                empleado.getFecha_retiro()
+                empleado.getFecha_retiro(),
+                usuarioId
         );
     }
 

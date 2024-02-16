@@ -10,7 +10,6 @@ import java.sql.Date;
 @Getter
 @Setter
 public class Empleado extends Usuario {
-    private Short usuario_empleado_id;
     private String apellidos;
     private String tel;
     private String nombre;
