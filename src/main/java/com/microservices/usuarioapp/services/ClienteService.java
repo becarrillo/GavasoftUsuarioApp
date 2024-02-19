@@ -4,8 +4,7 @@ import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.repositories.IClienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -23,22 +22,19 @@ public class ClienteService {
     public Cliente getOne(String numDocumento) {
         final Optional<Cliente> opt = Optional.ofNullable(iClienteRepository.findOne(numDocumento));
 
-        if (!opt.isPresent()) {
-            return null;
-        }
-        return opt.get();
-    }
-
-    public Short getUsuarioClienteId(String numDocumento) {
-        return iClienteRepository.getUsuarioId(numDocumento);
-    }
-
-    public Collection<Cliente> getAllClientes() {
-        return iClienteRepository.listAll();
+        return opt.orElse(null);
     }
 
     public Short getUsuarioClienteIdByNumDocumento(String numDocumento) {
-        return iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
+        return iClienteRepository.getUsuarioId(numDocumento);
+    }
+
+    public List<Cliente> getAllClientes() {
+        return iClienteRepository.listAll();
+    }
+
+    public Cliente getCliente(String numDocumento) {
+        return iClienteRepository.findUsuarioClienteByNumDocumento(numDocumento);
     }
 
     public Short updateByUsuario(String numDocumento, Cliente cliente) {

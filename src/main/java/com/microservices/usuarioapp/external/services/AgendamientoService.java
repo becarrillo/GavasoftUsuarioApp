@@ -33,16 +33,21 @@ public class AgendamientoService {
         return null;
     }
 
+    public Agendamiento getOneById(String agendamientoId) {
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/consultar/{agendamientoId}", Agendamiento.class, agendamientoId);
+    }
+
     public List<Agendamiento> listAll() {
-        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos", List.class);
+        List forObject = restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos", List.class);
+        return forObject;
     }
     /* Busca obtener del proyecto Agendamiento todos aquellos que son pagos de un determinado
        cliente por su número de documento, haciendo un mapeo en los dos gestores de bases de
        datos en cada uno de los microservicios (el de los usuarios y el de los agendamientos)
     */
     @SuppressWarnings("unchecked")
-    public List<Agendamiento> listByUsuarioClienteId(String numDocumento) {
-        final Short usuarioClienteId = iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
+    public List<Agendamiento> listByClienteNumDocumento(String numDocumento) {
+        final Short usuarioClienteId = iClienteRepository.findUsuarioClienteByNumDocumento(numDocumento).getUsuario_id();
 
         return restTemplate.getForObject(
                 "http://AGENDAMIENTO-APP/agendamientos/clientes/{usuarioClienteId}",
@@ -57,9 +62,16 @@ public class AgendamientoService {
     }
 
     public String cancelOneById(String agendamientoId) {
-        final String id = agendamientoId;
 
-        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/cancelar/{id}", String.class, id);
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/cancelar/{agendamientoId}", String.class, agendamientoId);
+    }
+
+    public Agendamiento cancelOnePaidById(String agendamientoId) {
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/cancelar/pagos/{agendamientoId}", Agendamiento.class, agendamientoId);
+    }
+
+    public List<Agendamiento> listByUsuarioClienteId(Short usuarioClienteId) {
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/filtrar-por-cliente/{usuarioClienteId}", List.class, usuarioClienteId);
     }
 
     /*public void reagendarServicio(String agendamientoId, Agendamiento agendamiento) {

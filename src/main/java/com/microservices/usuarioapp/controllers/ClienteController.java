@@ -1,6 +1,8 @@
 package com.microservices.usuarioapp.controllers;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +50,30 @@ public class ClienteController {
         return new ResponseEntity<>(clienteService.updateByUsuario(numDocumento, cliente).toString().concat(" fila(s) afectada(s)"), HttpStatus.OK);
     }
 
-
+    // Lo que se cancela es el Agendamiento, aunque el Servicio es lo que se compra en el Spa
+    @DeleteMapping(path = "/empleados/menu-clientes/historial-compras/clientes/{clienteNumDocumento}/agendamientos/{agendamientoId}/cancelar")
+    public ResponseEntity<String> cancelarServicioPago(
+            @PathVariable("clienteNumDocumento") String clienteNumDocumento,
+            @PathVariable("agendamientoId") String agendamientoId
+    ) {
+        final Agendamiento agendamiento = agendamientoService.getOneById(agendamientoId);
+        final Cliente cliente = clienteService.getCliente(clienteNumDocumento);
+        // Validaciones
+        if (
+                agendamiento.getUsuarioClienteId().equals(cliente.getUsuario_id()) &&
+                        agendamiento.getUsuarioClienteId().equals(clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento)) &&
+                        agendamiento.getEstado().equals("pago") &&
+                        // El sistema permitirá cancelar el servicio agendado desde 24 hrs. antes de su prestación
+                        LocalDateTime.now(ZoneId.of("GMT-5")).isBefore(agendamiento.getFechaHora().minusHours(24)) &&
+                        // El sistema verifica nuevamente la autorización del cliente al Spa para el manejo de los datos
+                        cliente.isAutorizacion_datos()
+        ) {
+            final Agendamiento cancelled = agendamientoService.cancelOnePaidById(agendamientoId);
+            return new ResponseEntity<String>("Servicio cancelado en agendamiento '"+cancelled.toString().concat("'"), HttpStatus.OK);
+        } else {
+            throw new RuntimeException("El agendamiento del servicio de Spa podría no estar pago o no existe");
+        }
+    }
     /*
     public ResponseEntity<List<Factura>> consultarHistorialDeCompras() {
 

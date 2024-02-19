@@ -16,8 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.*;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Map;
 
 @RestController
 @CrossOrigin("*")
@@ -87,7 +88,7 @@ public class EmpleadoController {
 
     @GetMapping(path = "/empleados/menu-asesor/agendamientos/clientes/{numDocumento}")
     public List<Agendamiento> listarAgendamientosByCliente(@PathVariable("numDocumento") String numDocumento) {
-        return this.agendamientoService.listByUsuarioClienteId(numDocumento);
+        return this.agendamientoService.listByClienteNumDocumento(numDocumento);
     }
 
     @PostMapping(path = "/empleados/menu-administrador/servicios/agregar/nuevo")
@@ -143,6 +144,15 @@ public class EmpleadoController {
         }
     }
 
+    @GetMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}")
+    public ResponseEntity<Map<String, Object>> obtenerClienteAgendamientos(@PathVariable("numDocumento") String clienteNumDocumento) {
+        final Map<String, Object> map = new HashMap<>();
+
+        map.put("cliente", clienteService.getCliente(clienteNumDocumento));
+        map.put("agendamientos", agendamientoService.listByClienteNumDocumento(clienteNumDocumento));
+        return new ResponseEntity<Map<String, Object>>(map, HttpStatus.OK);
+    }
+
     @PostMapping(
             path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicios/agendamientos/{agendamientoId}"
     )
@@ -154,7 +164,10 @@ public class EmpleadoController {
         agendamiento.setAgendamientoId(agendamientoId);
         Agendamiento newAgendamiento;
         try {
-            if (agendamiento.getUsuarioClienteId().equals(clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento)) && agendamiento.isPago()) {
+            if (
+                    agendamiento.getUsuarioClienteId().equals(clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento)) &&
+                            agendamiento.getEstado().equals("pago")
+            ) {
                 newAgendamiento = agendamientoService.updateOne(agendamiento);
                 return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.OK);
             }
@@ -164,13 +177,23 @@ public class EmpleadoController {
         }
     }
 
-    @DeleteMapping(path = "/empleados/menu-asesor/solicitudes/agendamientos/cancelar/{agendamientoId}")
-    public ResponseEntity<String> cancelarServicioPago(@PathVariable("agendamientoId") String agendamientoId) {
-        final String delAgendamientoId = agendamientoService.cancelOneById(agendamientoId);
-        if (delAgendamientoId == null) {
-            throw new RuntimeException("El agendamiento del servicio de Spa podría no estar pago o no existe");
+    @DeleteMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{clienteNumDocumento}/cancelar-servicios/agendamientos/{agendamientoId}")
+    public ResponseEntity<String> cancelarServicioAgendado(
+            @PathVariable("clienteNumDocumento") String usuarioClienteNumDocumento,
+            @PathVariable("agendamientoId") String agendamientoId
+    ) {
+        final String delAgendamientoId;
+        if (!agendamientoService.listByUsuarioClienteId(clienteService.getUsuarioClienteIdByNumDocumento(usuarioClienteNumDocumento)).isEmpty()) {
+            delAgendamientoId = agendamientoService.cancelOneById(agendamientoId);
+            if (delAgendamientoId != null) {
+                return new ResponseEntity<String>(delAgendamientoId, HttpStatus.OK);
+            } else {
+                throw new ResourceNotFoundException(
+                        "El agendamiento con id del cuerpo de petición para cancelar el servicio no se eliminó porque no existe"
+                );
+            }
         } else {
-            return new ResponseEntity<String>(delAgendamientoId, HttpStatus.OK);
+            throw new RuntimeException();
         }
     }
 }

@@ -3,6 +3,7 @@ package com.microservices.usuarioapp.repositories;
 import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Usuario;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,11 +12,14 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * @author Brando Elí Carrillo Pérez
  */
 @Repository
+@Slf4j
 public class ClienteRepository implements IClienteRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -79,9 +83,12 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
-    public Short getUsuarioId(String numDocumento) {
-        final String SQL = "SELECT usuario_id from dbo.clientes WHERE num_documento=?";
-        return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Short.class), numDocumento);
+    public short getUsuarioId(String numDocumento) {
+        final String SQL = "SELECT * from dbo.clientes WHERE num_documento=?";
+        final Cliente foundCliente = jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class), numDocumento);
+        assert foundCliente != null;
+        log.info("Cliente del servicio agendado hallado: '{}'", foundCliente.getEmail().concat(" con nombre: ").concat(foundCliente.getNombre()+" y apellidos: ").concat(foundCliente.getApellidos()));
+        return Objects.requireNonNull(foundCliente).getUsuario_id();
     }
 
     @Override
@@ -107,11 +114,11 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
-    public Short findUsuarioClienteIdByNumDocumento(String numDocumento) {
+    public Cliente findUsuarioClienteByNumDocumento(String numDocumento) {
         String SQL;
-        SQL = "SELECT usuario_cliente_id from dbo.clientes WHERE num_documento=?";
+        SQL = "SELECT * from dbo.clientes WHERE num_documento=?";
 
-        return jdbcTemplate.queryForObject(SQL, Short.class);
+        return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class));
     }
 
     @Override
