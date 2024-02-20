@@ -144,7 +144,7 @@ public class EmpleadoController {
         }
     }
 
-    @GetMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}")
+    @GetMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}/agendamientos")
     public ResponseEntity<Map<String, Object>> obtenerClienteAgendamientos(@PathVariable("numDocumento") String clienteNumDocumento) {
         final Map<String, Object> map = new HashMap<>();
 
