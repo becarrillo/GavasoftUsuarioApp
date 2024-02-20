@@ -7,6 +7,7 @@ import com.microservices.usuarioapp.external.models.Agendamiento;
 import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.external.services.AgendamientoService;
 import com.microservices.usuarioapp.external.services.ServicioService;
+import com.microservices.usuarioapp.models.UsuarioRol;
 import com.microservices.usuarioapp.services.ClienteService;
 import com.microservices.usuarioapp.services.EmpleadoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,12 +63,15 @@ public class EmpleadoController {
         return new ResponseEntity<>(cliente, HttpStatus.OK);
     }
 
-    @PatchMapping(path = "empleados/menu-administrador/admin-empleados/asignar-rol/{usuarioEmpleadoId}")
+    @PutMapping(path = "empleados/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}/asignar-rol")
     public ResponseEntity<Short> asignarRol(
             @PathVariable("usuarioEmpleadoId") Short usuarioEmpleadoId,
-            @RequestBody() String rol
+            @RequestBody UsuarioRol usuarioRol
     ) {
-        return new ResponseEntity<Short>(empleadoService.assignRol(usuarioEmpleadoId, rol), HttpStatus.OK);
+        if (usuarioRol.getRol().equals("cliente")) {
+            throw new RuntimeException("Petición no válida, un empleado aún activo no puede convertirse en cliente");
+        }
+        return new ResponseEntity<Short>(empleadoService.assignRol(usuarioEmpleadoId, usuarioRol.getRol()), HttpStatus.OK);
     }
 
     @GetMapping(path = "/empleados")

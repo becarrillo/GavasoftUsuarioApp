@@ -80,11 +80,18 @@ public class EmpleadoRepository implements IEmpleadoRepository {
     public int setEmpleadoRol(Short usuarioId, String rol) {
         String SQL;
         SQL = "UPDATE dbo.usuarios SET rol=? WHERE usuario_id=?";
+        jdbcTemplate.update(
+                SQL,
+                rol,
+                usuarioId.toString()
+        );
+
+        SQL = "UPDATE dbo.empleados SET rol=? WHERE usuario_id=?";
+
         final int rows = jdbcTemplate.update(
                 SQL,
-                BeanPropertyRowMapper.newInstance(Usuario.class),
                 rol,
-                usuarioId
+                usuarioId.toString()
         );
         return rows;
     }
