@@ -97,7 +97,7 @@ public class EmpleadoRepository implements IEmpleadoRepository {
 
     @Override
     public Empleado findOneByUsuarioId(Short usuarioId) {
-        final String SQL = "SELECT * from dbo.empleados WHERE usuario_empleado_id="+usuarioId.toString();
+        final String SQL = "SELECT * from dbo.empleados WHERE usuario_id="+usuarioId.toString();
         return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Empleado.class));
     }
 
