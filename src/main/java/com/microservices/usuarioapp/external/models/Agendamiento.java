@@ -11,18 +11,25 @@ import java.time.LocalDateTime;
 public class Agendamiento {
     private String agendamientoId;
     private LocalDateTime fechaHora;
-    private String estado;
+    private String estado = "tomado";
     private String servicioId;
     private Short usuarioClienteId;
+    private String carritoDeComprasId;
 
     public Agendamiento(
             LocalDateTime fechaHora,
-            String estado,
+            String servicioId
+    ) {
+        this.fechaHora = fechaHora;
+        this.servicioId = servicioId;
+    }
+
+    public Agendamiento(
+            LocalDateTime fechaHora,
             String servicioId,
             Short usuarioClienteId
     ) {
         this.fechaHora = fechaHora;
-        this.estado = estado;
         this.servicioId = servicioId;
         this.usuarioClienteId = usuarioClienteId;
     }

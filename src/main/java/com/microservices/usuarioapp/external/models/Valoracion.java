@@ -4,16 +4,26 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @Builder
-public class ServicioValoracion {
-    private int valoracionId;
+public class Valoracion {
+    private String valoracionId;
     private byte puntuacion;
     private String opinion;
     private LocalDateTime fechaHora;
-    private String servicioId;
+
+    public Valoracion(
+            byte puntuacion,
+            String opinion
+    ) {
+        this.puntuacion = puntuacion;
+        this.opinion = opinion;
+    }
 }

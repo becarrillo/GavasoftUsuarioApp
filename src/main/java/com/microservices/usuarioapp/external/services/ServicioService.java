@@ -30,7 +30,12 @@ public class ServicioService {
 
     public Servicio updateOne(String servicioNombre, com.microservices.usuarioapp.external.models.Servicio servicio) {
         final String name = servicioNombre;
-        return restTemplate.postForObject("http://SERVICIO-APP/servicios/{name}/modificar", servicio, Servicio.class, name);
+        return restTemplate.postForObject(
+                "http://SERVICIO-APP/servicios/{name}/modificar",
+                servicio,
+                Servicio.class,
+                name
+        );
     }
 
     public String deleteOneById(String servicioId) {

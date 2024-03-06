@@ -1,4 +1,9 @@
 package com.microservices.usuarioapp.controllers;
+import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
+import com.microservices.usuarioapp.external.models.Carrito;
+import com.microservices.usuarioapp.external.models.Valoracion;
+import com.microservices.usuarioapp.external.services.CarritoService;
+import com.microservices.usuarioapp.external.services.ValoracionService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
@@ -7,7 +12,6 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.microservices.usuarioapp.entities.Cliente;
@@ -29,7 +33,13 @@ public class ClienteController {
     private ServicioService servicioService;
 
     @Autowired
+    private ValoracionService valoracionService;
+
+    @Autowired
     private AgendamientoService agendamientoService;
+
+    @Autowired
+    private CarritoService carritoService;
 
     @PostMapping(path = "/clientes/registro")
     public ResponseEntity<String> crearCuenta(@RequestBody() Cliente cliente) {
@@ -40,18 +50,55 @@ public class ClienteController {
         }
     }
 
-    @GetMapping(path = "/clientes/servicios")
-    public ResponseEntity<List<Servicio>> consultarServicios() {
-        return new ResponseEntity<List<Servicio>>(servicioService.getAll(), HttpStatus.OK);
-    }
-
     @PostMapping(path = "/clientes/{clienteNumDocumento}/modificar")
     public ResponseEntity<String> modificarCuentaCliente(@PathVariable("clienteNumDocumento") String numDocumento, @RequestBody Cliente cliente) {
         return new ResponseEntity<>(clienteService.updateByUsuario(numDocumento, cliente).toString().concat(" fila(s) afectada(s)"), HttpStatus.OK);
     }
 
+    @GetMapping(path = "/clientes/servicios")
+    public ResponseEntity<List<Servicio>> consultarServicios() {
+        return new ResponseEntity<List<Servicio>>(servicioService.getAll(), HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/clientes/valoraciones/servicios/{servicioId}/agregar/nueva")
+    public ResponseEntity<String> valorarServicio(
+            @PathVariable("servicioId") String servicioId,
+            @RequestBody Valoracion valoracion
+    ) {
+        final String bodyRes = valoracionService.save(servicioId, valoracion);
+        return new ResponseEntity<String>(bodyRes, HttpStatus.CREATED);
+    }
+
+    @DeleteMapping(path = "/clientes/valoraciones/{servicioValoracionId}/eliminar")
+    public ResponseEntity<String> eliminarValoracionDeServicio(@PathVariable("servicioValoracionId") String servicioValoracionId) {
+        final String bodyRes = valoracionService.deleteOneById(servicioValoracionId);
+        return new ResponseEntity<String>(bodyRes, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/clientes/solicitudes/consultar-agenda/agendar-servicio")
+    public ResponseEntity<Agendamiento> agendarServicio(@RequestBody Agendamiento agendamiento) {
+        // Verifica asociación de un carrito de compras con este agendamiento por el campo carritoId, nulo no cumple
+        if (agendamiento.getCarritoDeComprasId() == null) {
+            agendamiento.setCarritoDeComprasId(carritoService.create());        // Id de carrito de compras asociado
+        }
+
+        final Agendamiento newAgendamiento;
+
+        try {
+            newAgendamiento = agendamientoService.save(agendamiento);
+            if (newAgendamiento == null) {
+                throw new ResourceNotFoundException("El cliente con el id de usuario del cuerpo de petición no existe");
+            } else {
+                carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId());
+            }
+            return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.CREATED);
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
     // Lo que se cancela es el Agendamiento, aunque el Servicio es lo que se compra en el Spa
-    @DeleteMapping(path = "/empleados/menu-clientes/historial-compras/clientes/{clienteNumDocumento}/agendamientos/{agendamientoId}/cancelar")
+    @DeleteMapping(path = "/clientes/menu-cliente/historial-compras/clientes/{clienteNumDocumento}/agendamientos/{agendamientoId}/cancelar")
     public ResponseEntity<String> cancelarServicioPago(
             @PathVariable("clienteNumDocumento") String clienteNumDocumento,
             @PathVariable("agendamientoId") String agendamientoId
@@ -74,11 +121,16 @@ public class ClienteController {
             throw new RuntimeException("El agendamiento del servicio de Spa podría no estar pago o no existe");
         }
     }
-    /*
-    public ResponseEntity<List<Factura>> consultarHistorialDeCompras() {
 
+    @GetMapping(path = "/clientes/carritos-de-compras/{carritoDeComprasId}")
+    public ResponseEntity<Carrito> consultarCarritoDeCompras(@PathVariable("carritoDeComprasId") String carritoDeComprasId) {
+        final Carrito foundCarrito = carritoService.getOne(carritoDeComprasId);
+
+        if (foundCarrito == null) {
+            throw new ResourceNotFoundException();
+        }
+        return new ResponseEntity<Carrito>(foundCarrito, HttpStatus.OK);
     }
-    */
 
     /*
     @GetMapping(path = "/{usuario-id}/ingresos-cliente")

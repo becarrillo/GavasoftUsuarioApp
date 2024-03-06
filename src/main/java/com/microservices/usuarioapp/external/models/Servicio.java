@@ -10,10 +10,7 @@ import java.sql.Time;
 @Getter
 @Setter
 @ToString
-public class Servicio implements  Serializable {
-    @Serial
-    private static final long serialVersionUID=1L;
-
+public class Servicio {
     private String servicioId;
     private String servicioNombre;
     private String descripcion;

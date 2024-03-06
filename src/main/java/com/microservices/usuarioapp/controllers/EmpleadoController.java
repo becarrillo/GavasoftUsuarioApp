@@ -4,8 +4,10 @@ import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Agendamiento;
+import com.microservices.usuarioapp.external.models.Carrito;
 import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.external.services.AgendamientoService;
+import com.microservices.usuarioapp.external.services.CarritoService;
 import com.microservices.usuarioapp.external.services.ServicioService;
 import com.microservices.usuarioapp.models.UsuarioRol;
 import com.microservices.usuarioapp.services.ClienteService;
@@ -20,6 +22,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RestController
 @CrossOrigin("*")
@@ -37,6 +40,9 @@ public class EmpleadoController {
 
     @Autowired
     private AgendamientoService agendamientoService;
+
+    @Autowired
+    private CarritoService carritoService;
 
     @PostMapping(path = "/empleados/menu-administrador/admin-empleados/crear-cuenta/nuevo")
     public ResponseEntity<String> crearCuentaEmpleado(@RequestBody() Empleado empleado) throws SQLException {
@@ -133,14 +139,27 @@ public class EmpleadoController {
         return new ResponseEntity<>(servicioService.getAll(), HttpStatus.OK);
     }
 
-    @PostMapping(path = "/empleados/menu-asesor/solicitudes/agendamientos/agendar/nuevo-servicio")
-    public ResponseEntity<Agendamiento> agregarAgendamiento(@RequestBody Agendamiento agendamiento) {
+    @PostMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}/agendar-servicio")
+    public ResponseEntity<Agendamiento> agendarServicio(
+            @PathVariable String numDocumento,
+            @RequestBody Agendamiento agendamiento
+    ) {
+        if (!agendamiento.getUsuarioClienteId().equals(clienteService.getUsuarioClienteIdByNumDocumento(numDocumento))) {
+            throw new NoSuchElementException("El id de usuario del cliente consultado no coincide con el del agendamiento");
+        }
+        // Verifica asociación de un carrito de compras con este agendamiento por el campo carritoId, nulo no cumple
+        if (agendamiento.getCarritoDeComprasId() == null) {
+            agendamiento.setCarritoDeComprasId(carritoService.create());        // Id de carrito de compras asociado
+        }
+
         final Agendamiento newAgendamiento;
         
         try {
             newAgendamiento = agendamientoService.save(agendamiento);
             if (newAgendamiento == null) {
                 throw new ResourceNotFoundException("El cliente con el id de usuario del cuerpo de petición no existe");
+            } else {
+                carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId());
             }
             return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.CREATED);
         } catch (Exception e) {
