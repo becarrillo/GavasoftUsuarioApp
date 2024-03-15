@@ -4,7 +4,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter
-@Setter
 public class UsuarioRol {
-    private String rol;
+    @Setter
+    private Short usuarioId;
+
+    private final String rol;
+
+    public UsuarioRol(String rol) {
+        this.rol = rol;
+    }
 }

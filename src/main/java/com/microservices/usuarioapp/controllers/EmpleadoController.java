@@ -4,7 +4,6 @@ import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Agendamiento;
-import com.microservices.usuarioapp.external.models.Carrito;
 import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.external.services.AgendamientoService;
 import com.microservices.usuarioapp.external.services.CarritoService;
@@ -12,6 +11,7 @@ import com.microservices.usuarioapp.external.services.ServicioService;
 import com.microservices.usuarioapp.models.UsuarioRol;
 import com.microservices.usuarioapp.services.ClienteService;
 import com.microservices.usuarioapp.services.EmpleadoService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -26,7 +26,8 @@ import java.util.NoSuchElementException;
 
 @RestController
 @CrossOrigin("*")
-@RequestMapping(path = "/usuarios")
+@RequestMapping(path = "/usuarios/empleados")
+@Slf4j
 public class EmpleadoController {
 
     @Autowired
@@ -44,7 +45,7 @@ public class EmpleadoController {
     @Autowired
     private CarritoService carritoService;
 
-    @PostMapping(path = "/empleados/menu-administrador/admin-empleados/crear-cuenta/nuevo")
+    @PostMapping(path = "/menu-administrador/admin-empleados/crear-cuenta/nuevo")
     public ResponseEntity<String> crearCuentaEmpleado(@RequestBody() Empleado empleado) throws SQLException {
         return new ResponseEntity<String>(
                 "Se insertaron "+empleadoService.saveEmpleado(empleado)+" registro(s) con éxito de empleado(s).",
@@ -52,14 +53,14 @@ public class EmpleadoController {
         );
     }
 
-    @PostMapping(path = "/empleados/menu-asesor/solicitudes/clientes/crear-cuenta")
+    @PostMapping(path = "/menu-asesor/solicitudes/clientes/crear-cuenta")
     public ResponseEntity<String> crearCuentaCliente(
             @RequestBody() Cliente cliente
     ) throws SQLException {
         return new ResponseEntity<String>(clienteService.save(cliente)+" registro(s) con éxito de cliente(s)", HttpStatus.CREATED);
     }
 
-    @GetMapping(path = "empleados/menu-asesor/solicitudes/clientes/{numDocumento}")
+    @GetMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}")
     public ResponseEntity<Cliente> consultarCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
         final Cliente cliente = clienteService.getOne(clienteNumDocumento);
 
@@ -69,39 +70,40 @@ public class EmpleadoController {
         return new ResponseEntity<>(cliente, HttpStatus.OK);
     }
 
-    @PutMapping(path = "empleados/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}/asignar-rol")
+    @PutMapping(path = "/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}/asignar-rol")
     public ResponseEntity<Short> asignarRol(
             @PathVariable("usuarioEmpleadoId") Short usuarioEmpleadoId,
             @RequestBody UsuarioRol usuarioRol
     ) {
-        if (usuarioRol.getRol().equals("cliente")) {
-            throw new RuntimeException("Petición no válida, un empleado aún activo no puede convertirse en cliente");
-        }
-        return new ResponseEntity<Short>(empleadoService.assignRol(usuarioEmpleadoId, usuarioRol.getRol()), HttpStatus.OK);
+        usuarioRol.setUsuarioId(usuarioEmpleadoId);
+        return new ResponseEntity<Short>(
+                empleadoService.assignRol(usuarioRol.getUsuarioId(), usuarioRol.getRol()),
+                HttpStatus.OK
+        );
     }
 
-    @GetMapping(path = "/empleados")
+    @GetMapping
     public ResponseEntity<List<Empleado>> listarEmpleados() {
         return new ResponseEntity<List<Empleado>>(empleadoService.getAllEmpleados(), HttpStatus.OK);
     }
 
-    @GetMapping(path = "/empleados/{usuarioId}")
+    @GetMapping(path = "/{usuarioId}")
     public ResponseEntity<Empleado> getEmpleado(@PathVariable("usuarioId") Short id) {
         final Empleado empleado = empleadoService.getEmpleado(id);
         return new ResponseEntity<Empleado>(empleado, HttpStatus.FOUND);
     }
 
-    @GetMapping(path = "/empleados/menu-administrador/agendamientos")
+    @GetMapping(path = "/menu-administrador/agendamientos")
     public ResponseEntity<List<Agendamiento>> listarAgendamientos() {
         return new ResponseEntity<>(this.agendamientoService.listAll(), HttpStatus.OK);
     }
 
-    @GetMapping(path = "/empleados/menu-asesor/agendamientos/clientes/{numDocumento}")
+    @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}")
     public List<Agendamiento> listarAgendamientosByCliente(@PathVariable("numDocumento") String numDocumento) {
         return this.agendamientoService.listByClienteNumDocumento(numDocumento);
     }
 
-    @PostMapping(path = "/empleados/menu-administrador/servicios/agregar/nuevo")
+    @PostMapping(path = "/menu-administrador/servicios/agregar/nuevo")
     public ResponseEntity<String> agregarServicio(@RequestBody() Servicio servicio) throws IOException {
         final Servicio myServicio = servicioService.save(servicio);
         if (myServicio == null) {
@@ -110,7 +112,7 @@ public class EmpleadoController {
         return new ResponseEntity<String>(myServicio.toString(), HttpStatus.CREATED);
     }
 
-    @GetMapping(path = "/empleados/menu-administrador/servicios/consultar/{servicioNombre}")
+    @GetMapping(path = "/menu-administrador/servicios/consultar/{servicioNombre}")
     public ResponseEntity<Servicio> consultarServicio(@PathVariable("servicioNombre") String name) throws IOException {
         final Servicio servicio = servicioService.getOne(name);
 
@@ -120,12 +122,12 @@ public class EmpleadoController {
         throw new ResourceNotFoundException("El Servicio consultado no existe");
     }
 
-    @PostMapping(path = "/empleados/menu-administrador/servicios/modificar/{name}")
+    @PostMapping(path = "/menu-administrador/servicios/modificar/{name}")
     public Servicio modificarServicio(@PathVariable("name") String servicioNombre, @RequestBody Servicio servicio) throws IOException {
         return servicioService.updateOne(servicioNombre, servicio);
     }
 
-    @DeleteMapping(path = "/empleados/menu-administrador/servicios/eliminar/{id}")
+    @DeleteMapping(path = "/menu-administrador/servicios/eliminar/{id}")
     public ResponseEntity<String> eliminarServicio(@PathVariable("id") String servicioId) {
         final String delServiceId = servicioService.deleteOneById(servicioId);
         if (delServiceId != null) {
@@ -139,7 +141,7 @@ public class EmpleadoController {
         return new ResponseEntity<>(servicioService.getAll(), HttpStatus.OK);
     }
 
-    @PostMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}/agendar-servicio")
+    @PostMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/agendar-servicio")
     public ResponseEntity<Agendamiento> agendarServicio(
             @PathVariable String numDocumento,
             @RequestBody Agendamiento agendamiento
@@ -159,7 +161,10 @@ public class EmpleadoController {
             if (newAgendamiento == null) {
                 throw new ResourceNotFoundException("El cliente con el id de usuario del cuerpo de petición no existe");
             } else {
-                carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId());
+                log.info(
+                        "Carrito de Compras del agendamiento tomado: '{}'",
+                        carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId())
+                );
             }
             return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.CREATED);
         } catch (Exception e) {
@@ -167,7 +172,7 @@ public class EmpleadoController {
         }
     }
 
-    @GetMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}/agendamientos")
+    @GetMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/agendamientos")
     public ResponseEntity<Map<String, Object>> obtenerClienteAgendamientos(@PathVariable("numDocumento") String clienteNumDocumento) {
         final Map<String, Object> map = new HashMap<>();
 
@@ -177,7 +182,7 @@ public class EmpleadoController {
     }
 
     @PostMapping(
-            path = "/empleados/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicios/agendamientos/{agendamientoId}"
+            path = "/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicios/agendamientos/{agendamientoId}"
     )
     public ResponseEntity<Agendamiento> reagendarServicio(
             @PathVariable("numDocumento") String clienteNumDocumento,
@@ -200,7 +205,7 @@ public class EmpleadoController {
         }
     }
 
-    @DeleteMapping(path = "/empleados/menu-asesor/solicitudes/clientes/{clienteNumDocumento}/cancelar-servicios/agendamientos/{agendamientoId}")
+    @DeleteMapping(path = "/menu-asesor/solicitudes/clientes/{clienteNumDocumento}/cancelar-servicios/agendamientos/{agendamientoId}")
     public ResponseEntity<String> cancelarServicioAgendado(
             @PathVariable("clienteNumDocumento") String usuarioClienteNumDocumento,
             @PathVariable("agendamientoId") String agendamientoId

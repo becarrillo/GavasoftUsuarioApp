@@ -21,18 +21,15 @@ public class Cliente extends Usuario {
             String nombre,
             String email,
             String password,
-            String rol,
             String tel,
             String tipo_documento,
             String num_documento,
-            boolean autorizacion_datos,
-            int saldo_favor
+            boolean autorizacion_datos
     ) {
-        super(apellidos,nombre,email,password,rol,tel);
+        super(apellidos,nombre,email,password,"cliente",tel);
         this.tipo_documento = tipo_documento;
         this.num_documento = num_documento;
         this.autorizacion_datos = autorizacion_datos;
-        this.saldo_favor += saldo_favor;
     }
 
     public Cliente() {

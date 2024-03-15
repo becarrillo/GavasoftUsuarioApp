@@ -25,6 +25,22 @@ public class ClienteService {
         return opt.orElse(null);
     }
 
+    public String getClienteNumDocumentoByUsuarioId(Short usuarioClienteId) {
+        return iClienteRepository.getClienteNumDocumentoByUsuarioId(usuarioClienteId);
+    }
+
+    public String getClienteTipoDocumentoByUsuarioId(Short usuarioClienteId) {
+        return iClienteRepository.getClienteTipoDocumentoByUsuarioId(usuarioClienteId);
+    }
+
+    public String getClienteNombreByUsuarioId(Short usuarioClienteId) {
+        return iClienteRepository.getClienteNombreByUsuarioId(usuarioClienteId);
+    }
+
+    public String getClienteApellidosByUsuarioId(Short usuarioClienteId) {
+        return iClienteRepository.getClienteApellidosByUsuarioId(usuarioClienteId);
+    }
+
     public Short getUsuarioClienteIdByNumDocumento(String numDocumento) {
         return iClienteRepository.getUsuarioId(numDocumento);
     }

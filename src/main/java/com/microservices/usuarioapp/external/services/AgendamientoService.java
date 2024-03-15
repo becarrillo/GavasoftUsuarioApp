@@ -21,16 +21,17 @@ public class AgendamientoService {
         para la comunicación desde el presente proyecto
     */
     public Agendamiento save(Agendamiento agendamiento) {
+        Agendamiento newAgendamiento;
         if (iClienteRepository.listAll().stream().anyMatch(c -> c.getUsuario_id().equals(agendamiento.getUsuarioClienteId()))) {
-            Agendamiento newAgendamiento;
             newAgendamiento = restTemplate.postForObject(
                     "http://AGENDAMIENTO-APP/agendamientos/agregar/nuevo",
                     agendamiento,
                     Agendamiento.class
             );
-            return newAgendamiento;
+        } else {
+            newAgendamiento = null;
         }
-        return null;
+        return newAgendamiento;
     }
 
     public Agendamiento getOneById(String agendamientoId) {
@@ -38,9 +39,20 @@ public class AgendamientoService {
     }
 
     public List<Agendamiento> listAll() {
-        List forObject = restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos", List.class);
-        return forObject;
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos", List.class);
     }
+
+    public List<Agendamiento> listByCarritoDeComprasId(String carritoDeComprasId) {
+        final String URL = "http://AGENDAMIENTO-APP/agendamientos/carritos-de-compras/{carritoDeComprasId}";
+        return restTemplate.getForObject(URL, List.class, carritoDeComprasId);
+    }
+
+    public List<Agendamiento> listTomadosByUsuarioClienteId(Short usuarioClienteId) {
+        final String URL = "http://AGENDAMIENTO-APP/agendamientos/clientes/{usuarioClienteId}/tomados";
+        return restTemplate.getForObject(URL, List.class, usuarioClienteId);
+    }
+
+
     /* Busca obtener del proyecto Agendamiento todos aquellos que son pagos de un determinado
        cliente por su número de documento, haciendo un mapeo en los dos gestores de bases de
        datos en cada uno de los microservicios (el de los usuarios y el de los agendamientos)
@@ -54,6 +66,11 @@ public class AgendamientoService {
                 List.class,
                 usuarioClienteId
         );
+    }
+
+    public void setEstadoToFacturado(String carritoDeComprasId) {
+        final String URL = "http://AGENDAMIENTO-APP/agendamientos/carritos-de-compras/{carritoId}/actualizar-estado/facturado";
+        restTemplate.put(URL, this.listByCarritoDeComprasId(carritoDeComprasId), carritoDeComprasId);
     }
 
     public Agendamiento updateOne(Agendamiento agendamiento) {

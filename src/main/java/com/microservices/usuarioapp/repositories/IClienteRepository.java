@@ -11,6 +11,10 @@ public interface IClienteRepository {
     Cliente findOne(String numDocumento);
     Cliente findOneByUsuarioId(Short usuarioId);
     Cliente findUsuarioClienteByNumDocumento(String numDocumento);
+    String getClienteNumDocumentoByUsuarioId(Short usuarioClienteId);
+    String getClienteTipoDocumentoByUsuarioId(Short usuarioClienteId);
+    String getClienteNombreByUsuarioId(Short usuarioClienteId);
+    String getClienteApellidosByUsuarioId(Short usuarioClienteId);
     List<Cliente> listAll();
     short updateByUsuario(String numDocumento, Cliente cliente);
     short deleteByUsuarioId(Short usuarioId);

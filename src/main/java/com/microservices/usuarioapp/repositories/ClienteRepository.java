@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * @author Brando Elí Carrillo Pérez
@@ -119,6 +118,42 @@ public class ClienteRepository implements IClienteRepository {
         SQL = "SELECT * from dbo.clientes WHERE num_documento=?";
 
         return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class));
+    }
+
+    @Override
+    public String getClienteNumDocumentoByUsuarioId(Short usuarioClienteId) {
+        final String SQL = "SELECT num_documento from dbo.clientes WHERE usuario_cliente_id=?";
+        return jdbcTemplate.queryForObject(SQL,
+                BeanPropertyRowMapper.newInstance(String.class),
+                usuarioClienteId
+        );
+    }
+
+    @Override
+    public String getClienteTipoDocumentoByUsuarioId(Short usuarioClienteId) {
+        final String SQL = "SELECT tipo_documento from dbo.clientes WHERE usuario_cliente_id=?";
+        return jdbcTemplate.queryForObject(SQL,
+                BeanPropertyRowMapper.newInstance(String.class),
+                usuarioClienteId
+        );
+    }
+
+    @Override
+    public String getClienteNombreByUsuarioId(Short usuarioClienteId) {
+        final String SQL = "SELECT nombre from dbo.clientes WHERE num_documento=?";
+        return jdbcTemplate.queryForObject(SQL,
+                BeanPropertyRowMapper.newInstance(String.class),
+                usuarioClienteId
+        );
+    }
+
+    @Override
+    public String getClienteApellidosByUsuarioId(Short usuarioClienteId) {
+        final String SQL = "SELECT apellidos from dbo.clientes WHERE usuario_cliente_id=?";
+        return jdbcTemplate.queryForObject(SQL,
+                BeanPropertyRowMapper.newInstance(String.class),
+                usuarioClienteId
+        );
     }
 
     @Override
