@@ -122,18 +122,18 @@ public class ClienteRepository implements IClienteRepository {
 
     @Override
     public String getClienteNumDocumentoByUsuarioId(Short usuarioClienteId) {
-        final String SQL = "SELECT num_documento from dbo.clientes WHERE usuario_cliente_id=?";
+        final String SQL = "SELECT num_documento from dbo.clientes WHERE usuario_id=?";
         return jdbcTemplate.queryForObject(SQL,
-                BeanPropertyRowMapper.newInstance(String.class),
+                String.class,
                 usuarioClienteId
         );
     }
 
     @Override
     public String getClienteTipoDocumentoByUsuarioId(Short usuarioClienteId) {
-        final String SQL = "SELECT tipo_documento from dbo.clientes WHERE usuario_cliente_id=?";
+        final String SQL = "SELECT tipo_documento from dbo.clientes WHERE usuario_id=?";
         return jdbcTemplate.queryForObject(SQL,
-                BeanPropertyRowMapper.newInstance(String.class),
+                String.class,
                 usuarioClienteId
         );
     }
@@ -142,16 +142,16 @@ public class ClienteRepository implements IClienteRepository {
     public String getClienteNombreByUsuarioId(Short usuarioClienteId) {
         final String SQL = "SELECT nombre from dbo.clientes WHERE num_documento=?";
         return jdbcTemplate.queryForObject(SQL,
-                BeanPropertyRowMapper.newInstance(String.class),
+                String.class,
                 usuarioClienteId
         );
     }
 
     @Override
     public String getClienteApellidosByUsuarioId(Short usuarioClienteId) {
-        final String SQL = "SELECT apellidos from dbo.clientes WHERE usuario_cliente_id=?";
+        final String SQL = "SELECT apellidos from dbo.clientes WHERE usuario_id=?";
         return jdbcTemplate.queryForObject(SQL,
-                BeanPropertyRowMapper.newInstance(String.class),
+                String.class,
                 usuarioClienteId
         );
     }

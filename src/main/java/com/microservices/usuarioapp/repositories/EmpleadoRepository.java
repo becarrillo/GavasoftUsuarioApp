@@ -49,7 +49,7 @@ public class EmpleadoRepository implements IEmpleadoRepository {
         return (short) jdbcTemplate.update(
                 SQL,
                 empleado.getUrl_fotografia(),
-                empleado.getUsuario_id(),
+                empleadoUsuario.getUsuario_id(),
                 empleadoUsuario.getApellidos(),
                 empleadoUsuario.getNombre(),
                 empleadoUsuario.getEmail(),

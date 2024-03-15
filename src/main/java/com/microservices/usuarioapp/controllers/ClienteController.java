@@ -60,8 +60,8 @@ public class ClienteController {
     }
 
     @GetMapping(path = "/{usuarioClienteId}/numero-de-documento")
-    public String obtenerClienteNumDocumentoByUsuarioId(@PathVariable Short usuarioClienteId) {
-        return clienteService.getClienteNumDocumentoByUsuarioId(usuarioClienteId);
+    public ResponseEntity<String> obtenerClienteNumDocumentoByUsuarioId(@PathVariable Short usuarioClienteId) {
+        return new ResponseEntity<String>(clienteService.getClienteNumDocumentoByUsuarioId(usuarioClienteId), HttpStatus.OK);
     }
 
     @GetMapping(path = "/{usuarioClienteId}/tipo-de-documento")
@@ -106,14 +106,14 @@ public class ClienteController {
 
     @PostMapping(path = "/solicitudes/consultar-agenda/agendar-servicio")
     public ResponseEntity<Agendamiento> agendarServicio(@RequestBody Agendamiento agendamiento) {
-        List<Agendamiento> agendamientosTomadosByUsuarioCliente;
+        final List<Agendamiento> agendamientosTomadosByUsuarioCliente;
         agendamientosTomadosByUsuarioCliente = agendamientoService
                 .listTomadosByUsuarioClienteId(agendamiento.getUsuarioClienteId());
         // Se verifica la NO existencia de un agendamiento con estado "tomado" del cliente (NO pertenece a algún Carrito)
         if (agendamientosTomadosByUsuarioCliente.isEmpty()) {
             agendamiento.setCarritoDeComprasId(carritoService.create()); // Se asocia el agendamiento a instancia nueva de Carrito
         }
-        Agendamiento newAgendamiento;
+        final Agendamiento newAgendamiento;
 
         try {
             newAgendamiento = agendamientoService.save(agendamiento);
@@ -153,7 +153,7 @@ public class ClienteController {
             final Agendamiento cancelled = agendamientoService.cancelOnePaidById(agendamientoId);
             return new ResponseEntity<String>("Servicio cancelado en agendamiento '"+cancelled.toString().concat("'"), HttpStatus.OK);
         } else {
-            throw new RuntimeException("El agendamiento del servicio de Spa podría no estar pago o no existe");
+            throw new RuntimeException("El agendamiento del servicio de Spa podría estar sin pago, estar dentro de 24 horas antes o no existir");
         }
     }
 
