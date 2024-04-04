@@ -15,4 +15,9 @@ public class Carrito {
     private String carritoId;
     private int subtotal;
     private List<Agendamiento> agendamientosList;
+
+    public Carrito(String carritoId, int subtotal) {
+        this.carritoId = carritoId;
+        this.subtotal = subtotal;
+    }
 }

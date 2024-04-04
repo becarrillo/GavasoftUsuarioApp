@@ -7,13 +7,13 @@ import java.util.List;
 
 @Repository
 public interface IEmpleadoRepository {
-    Short saveEmpleado(Empleado empleado) throws SQLException;
+    Short save(Empleado empleado) throws SQLException;
     int setEmpleadoRol(Short usuarioId, String rol);
     List<Empleado> listAll();
     Empleado findOneByUsuarioId(Short usuarioId);
 
     String getEmpleadoRolByUsuarioId(Short usuarioEmpleadoId);
 
-    short updateByUsuarioId(short usuarioId, Empleado empleado);
+    Empleado updateByUsuarioId(short usuarioId, Empleado empleado);
     short deleteByUsuarioId(short usuarioId);
 }

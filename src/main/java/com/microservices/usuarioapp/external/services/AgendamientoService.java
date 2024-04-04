@@ -35,14 +35,36 @@ public class AgendamientoService {
     }
 
     public Agendamiento getOneById(String agendamientoId) {
-        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/consultar/{agendamientoId}", Agendamiento.class, agendamientoId);
+        return restTemplate.getForObject(
+                "http://AGENDAMIENTO-APP/agendamientos/consultar/{agendamientoId}",
+                Agendamiento.class,
+                agendamientoId
+        );
+    }
+
+    public String getCarritoDeComprasIdByUsuarioClienteId(Short usuarioClienteId) {
+        return restTemplate.getForObject(
+                "http://AGENDAMIENTO-APP/agendamientos/clientes/{usuarioClienteId}/carrito-de-compras-id",
+                String.class,
+                usuarioClienteId
+        );
     }
 
     public List<Agendamiento> listAll() {
         return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos", List.class);
     }
 
-    public List<Agendamiento> listByCarritoDeComprasId(String carritoDeComprasId) {
+    public List<Agendamiento> listAllByClienteNumDocumento(String numDocumento) {
+        final Short usuarioClienteId = iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
+
+        return restTemplate.getForObject(
+                "http://AGENDAMIENTO-APP/agendamientos/filtrar-por-cliente/{usuarioClienteId}",
+                List.class,
+                usuarioClienteId
+        );
+    }
+
+    public List<Agendamiento> listAllByCarritoDeComprasId(String carritoDeComprasId) {
         final String URL = "http://AGENDAMIENTO-APP/agendamientos/carritos-de-compras/{carritoDeComprasId}";
         return restTemplate.getForObject(URL, List.class, carritoDeComprasId);
     }
@@ -58,33 +80,43 @@ public class AgendamientoService {
        datos en cada uno de los microservicios (el de los usuarios y el de los agendamientos)
     */
     @SuppressWarnings("unchecked")
-    public List<Agendamiento> listByClienteNumDocumento(String numDocumento) {
-        final Short usuarioClienteId = iClienteRepository.findUsuarioClienteByNumDocumento(numDocumento).getUsuario_id();
+    public List<Agendamiento> listTomadosByClienteNumDocumento(String numDocumento) {
+        final Short usuarioClienteId = iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
 
         return restTemplate.getForObject(
-                "http://AGENDAMIENTO-APP/agendamientos/clientes/{usuarioClienteId}",
+                "http://AGENDAMIENTO-APP/agendamientos/clientes/{usuarioClienteId}/tomados",
                 List.class,
                 usuarioClienteId
         );
     }
 
-    public void setEstadoToFacturado(String carritoDeComprasId) {
-        final String URL = "http://AGENDAMIENTO-APP/agendamientos/carritos-de-compras/{carritoId}/actualizar-estado/facturado";
-        restTemplate.put(URL, this.listByCarritoDeComprasId(carritoDeComprasId), carritoDeComprasId);
+    public List<Agendamiento> listPagadosByClienteNumDocumento(String numDocumento) {
+        final Short usuarioClienteId = iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
+
+        return restTemplate.getForObject(
+                "http://AGENDAMIENTO-APP/agendamientos/clientes/{usuarioClienteId}/pagados",
+                List.class,
+                usuarioClienteId
+        );
+    }
+
+    public List<Agendamiento> setEstadoToFacturado(String carritoDeComprasId) {
+        final String URL = "http://AGENDAMIENTO-APP/agendamientos/carritos-de-compras/{carritoDeComprasId}/actualizar-estado/facturado";
+        return restTemplate.getForObject(URL, List.class, carritoDeComprasId);
     }
 
     public Agendamiento updateOne(Agendamiento agendamiento) {
         final String agendamientoId = agendamiento.getAgendamientoId();
-        return restTemplate.postForObject("http://AGENDAMIENTO-APP/agendamientos/modificar/{agendamientoId}", agendamiento, Agendamiento.class, agendamientoId);
+        return restTemplate.postForObject("http://AGENDAMIENTO-APP/agendamientos/{agendamientoId}/modificar", agendamiento, Agendamiento.class, agendamientoId);
     }
 
     public String cancelOneById(String agendamientoId) {
 
-        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/cancelar/{agendamientoId}", String.class, agendamientoId);
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/{agendamientoId}/cancelar", String.class, agendamientoId);
     }
 
     public Agendamiento cancelOnePaidById(String agendamientoId) {
-        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/cancelar/pagos/{agendamientoId}", Agendamiento.class, agendamientoId);
+        return restTemplate.getForObject("http://AGENDAMIENTO-APP/agendamientos/{agendamientoId}/cancelar/pagos", Agendamiento.class, agendamientoId);
     }
 
     public List<Agendamiento> listByUsuarioClienteId(Short usuarioClienteId) {

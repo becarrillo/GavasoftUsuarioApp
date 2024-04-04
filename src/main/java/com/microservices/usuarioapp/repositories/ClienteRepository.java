@@ -113,11 +113,11 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
-    public Cliente findUsuarioClienteByNumDocumento(String numDocumento) {
+    public Short findUsuarioClienteIdByNumDocumento(String numDocumento) {
         String SQL;
-        SQL = "SELECT * from dbo.clientes WHERE num_documento=?";
+        SQL = "SELECT usuario_id from dbo.clientes WHERE num_documento=?";
 
-        return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class));
+        return jdbcTemplate.queryForObject(SQL, Short.class, numDocumento);
     }
 
     @Override
@@ -157,9 +157,9 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
-    public short updateByUsuario(String numDocumento, Cliente cliente) {
-        final String SQL = "UPDATE dbo.clientes SET cliente_apellidos=?, cliente_nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, autorizacion_datos=?, saldo_favor=? WHERE num_documento=?";
-        return (short) jdbcTemplate.update(
+    public Cliente updateByUsuarioId(Short usuarioClienteId, Cliente cliente) {
+        String SQL = "UPDATE dbo.clientes SET cliente_apellidos=?, cliente_nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, autorizacion_datos=?, saldo_favor=? WHERE usuario_id=?";
+        jdbcTemplate.update(
                 SQL,
                 cliente.getApellidos(),
                 cliente.getNombre(),
@@ -171,13 +171,18 @@ public class ClienteRepository implements IClienteRepository {
                 cliente.getNum_documento(),
                 cliente.isAutorizacion_datos(),
                 cliente.getSaldo_favor(),
-                numDocumento
+                usuarioClienteId
         );
+
+        SQL = "SELECT * from dbo.clientes WHERE usuario_id=?";
+        return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class), usuarioClienteId);
     }
 
     @Override
     public short deleteByUsuarioId(Short usuarioId) {
-        return 0;
+        final String SQL;
+        SQL = "DELETE FROM dbo.usuarios WHERE usuario_id=?";
+        return (short) jdbcTemplate.update(SQL, usuarioId);
     }
 
     /*

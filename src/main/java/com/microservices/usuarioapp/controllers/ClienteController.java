@@ -3,12 +3,13 @@ import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Carrito;
 import com.microservices.usuarioapp.external.models.Valoracion;
 import com.microservices.usuarioapp.external.services.*;
-import com.microservices.usuarioapp.models.Factura;
+import com.microservices.usuarioapp.external.models.Factura;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -52,11 +53,13 @@ public class ClienteController {
     }
 
     @PostMapping(path = "/{clienteNumDocumento}/modificar")
-    public ResponseEntity<String> modificarCuentaCliente(
+    public ResponseEntity<String> modificarCuenta(
             @PathVariable("clienteNumDocumento") String numDocumento,
             @RequestBody Cliente cliente
     ) {
-        return new ResponseEntity<>(clienteService.updateByUsuario(numDocumento, cliente).toString().concat(" fila(s) afectada(s)"), HttpStatus.OK);
+        final Short usuarioClienteId;
+        usuarioClienteId = clienteService.getUsuarioClienteIdByNumDocumento(numDocumento);
+        return new ResponseEntity<>(clienteService.updateByUsuarioId(usuarioClienteId, cliente).toString().concat(" fila(s) afectada(s)"), HttpStatus.OK);
     }
 
     @GetMapping(path = "/{usuarioClienteId}/numero-de-documento")
@@ -106,26 +109,26 @@ public class ClienteController {
 
     @PostMapping(path = "/solicitudes/consultar-agenda/agendar-servicio")
     public ResponseEntity<Agendamiento> agendarServicio(@RequestBody Agendamiento agendamiento) {
-        final List<Agendamiento> agendamientosTomadosByUsuarioCliente;
-        agendamientosTomadosByUsuarioCliente = agendamientoService
-                .listTomadosByUsuarioClienteId(agendamiento.getUsuarioClienteId());
+        final String carritoDeComprasId = agendamientoService.getCarritoDeComprasIdByUsuarioClienteId(agendamiento.getUsuarioClienteId());
         // Se verifica la NO existencia de un agendamiento con estado "tomado" del cliente (NO pertenece a algún Carrito)
-        if (agendamientosTomadosByUsuarioCliente.isEmpty()) {
+        if (carritoDeComprasId == null) {
             agendamiento.setCarritoDeComprasId(carritoService.create()); // Se asocia el agendamiento a instancia nueva de Carrito
+        } else {
+            agendamiento.setCarritoDeComprasId(carritoDeComprasId);
         }
         final Agendamiento newAgendamiento;
 
         try {
             newAgendamiento = agendamientoService.save(agendamiento);
             if (newAgendamiento == null) {
-                throw new ResourceNotFoundException("El cliente con el id de usuario del cuerpo de petición no existe");
-            } else {
-                newAgendamiento.setCarritoDeComprasId(agendamientosTomadosByUsuarioCliente.get(0).getCarritoDeComprasId());
-                carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId());
-            }
+                throw new ResourceNotFoundException(
+                        "El cliente con el id de usuario de la petición no existe o no tiene ningún agendamiento con estado tomado"
+                );
+            };
         } catch (Exception e) {
             throw e;
         }
+        carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId());
         return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.CREATED);
     }
 
@@ -157,38 +160,27 @@ public class ClienteController {
         }
     }
 
-    @GetMapping(path = "/carritos-de-compras/{carritoDeComprasId}")
-    public ResponseEntity<Carrito> consultarCarritoDeCompras(@PathVariable String carritoDeComprasId) {
-        final Carrito foundCarrito = carritoService.getOne(carritoDeComprasId);
-
-        if (foundCarrito == null) {
-            throw new ResourceNotFoundException();
-        }
-        foundCarrito.setAgendamientosList(agendamientoService.listByCarritoDeComprasId(carritoDeComprasId));
-        return new ResponseEntity<Carrito>(foundCarrito, HttpStatus.OK);
-    }
-
-    @GetMapping(path = "/{usuarioClienteId}/consultar-carrito-de-compras")
-    public ResponseEntity<Carrito> consultarCarritoDeComprasPorUsuarioClienteId(@PathVariable Short usuarioClienteId) {
-        final List<Agendamiento> agendamientos = agendamientoService.listByUsuarioClienteId(usuarioClienteId);
+    @GetMapping(path = "/{usuarioClienteId}/carrito-de-compras")
+    public ResponseEntity<Carrito> consultarCarritoDeComprasPorUsuarioClienteId(
+            @PathVariable Short usuarioClienteId
+    ) {
         /*
-            Cada agendamiento le pertenece a un carrito de compras, su estado es "tomado" por defecto
-            antes de ser cambiado a "facturado"
+            Cada agendamiento: cuando su estado es "tomado" por defecto, le pertenece a
+            un carrito de compras antes de ser cambiado a "facturado". Por lo que el usua-
+            rio tendrá siempre disponible un solo carrito de compras al agregar ítems
         */
-        if (agendamientos.stream().noneMatch(a -> a.getEstado().equals("tomado"))) {
+        final List<Agendamiento> agendamientosTomados = agendamientoService
+                .listByUsuarioClienteId(usuarioClienteId)
+                .stream()
+                .filter(at -> at.getEstado().equals("tomado"))
+                .toList();
+        if (agendamientosTomados.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+        final Agendamiento firstTomadoAgendamiento = agendamientosTomados.get(0);
+        final Carrito foundCarrito = carritoService.getOne(firstTomadoAgendamiento.getCarritoDeComprasId());
+        foundCarrito.setAgendamientosList(agendamientosTomados);
 
-        final Agendamiento firstTomadoAgendamiento = agendamientos.stream()
-                .filter(a -> a.getEstado().equals("tomado"))
-                .findFirst()
-                .orElse(null);
-        if (firstTomadoAgendamiento == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Carrito foundCarrito = carritoService.getOne(firstTomadoAgendamiento.getCarritoDeComprasId());
-        foundCarrito.setAgendamientosList(agendamientos);
         return new ResponseEntity<Carrito>(
                 foundCarrito,
                 HttpStatus.OK
@@ -197,19 +189,29 @@ public class ClienteController {
 
     @PostMapping(path = "/{usuarioClienteId}/facturas/generar-nueva")
     public ResponseEntity<Factura> generarFactura(@PathVariable Short usuarioClienteId, @RequestBody Factura factura) {
-        ResponseEntity<Factura> res = new ResponseEntity<Factura>(
-                facturaService.generate(usuarioClienteId, factura),
-                HttpStatus.CREATED
-        );
-        agendamientoService.setEstadoToFacturado(factura.getCarritoDeComprasId());
-        return res;
-    }
+        try {
+            final Factura generatedFactura = facturaService.generate(usuarioClienteId, factura);
+            ResponseEntity<Factura> res;
 
-    @PutMapping(path = "/agendamientos/carritos-de-compras/{carritoId}/actualizar-estado/facturado")
-    public void putAgendamientosFacturadosEstadoPorCarritoDeComprasId(
-            @PathVariable("carritoId") String carritoDeCompradId
-    ) {
-        agendamientoService.setEstadoToFacturado(carritoDeCompradId);
+            if (generatedFactura != null) {
+                res = new ResponseEntity<Factura>(
+                        generatedFactura,
+                        HttpStatus.CREATED
+                );
+
+                Objects.requireNonNull(res.getBody())
+                        .setAgendamientosList(agendamientoService
+                                .setEstadoToFacturado(
+                                        factura.getCarritoDeComprasId()
+                                )
+                        );
+                return res;
+            }
+            res = new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            return res;
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     /*

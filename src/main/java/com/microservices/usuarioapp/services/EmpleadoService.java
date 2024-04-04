@@ -27,9 +27,9 @@ public class EmpleadoService {
         //producer.send(message);
     }
 
-    public short saveEmpleado(Empleado empleado) throws SQLException {
+    public short save(Empleado empleado) throws SQLException {
 
-        return iEmpleadoRepository.saveEmpleado(empleado);
+        return iEmpleadoRepository.save(empleado);
     }
 
     public Short assignRol(Short usuarioId, String rol) {
@@ -41,7 +41,7 @@ public class EmpleadoService {
         return iEmpleadoRepository.listAll();
     }
 
-    public Empleado getEmpleado(Short usuarioId) {
+    public Empleado getEmpleadoByUsuarioId(Short usuarioId) {
         return iEmpleadoRepository.findOneByUsuarioId(usuarioId);
     }
 
@@ -51,5 +51,13 @@ public class EmpleadoService {
 
     public Cliente getClienteByUsuarioId(Short usuarioId) {
         return iClienteRepository.findOneByUsuarioId(usuarioId);
+    }
+
+    public Empleado updateEmpleadoByUsuarioId(Short usuarioEmpleadoId, Empleado empleado) {
+        return iEmpleadoRepository.updateByUsuarioId(usuarioEmpleadoId, empleado);
+    }
+
+    public short deleteByUsuarioId(Short usuarioEmpleadoId) {
+        return iEmpleadoRepository.deleteByUsuarioId(usuarioEmpleadoId);
     }
 }

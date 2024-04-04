@@ -50,10 +50,14 @@ public class ClienteService {
     }
 
     public Cliente getCliente(String numDocumento) {
-        return iClienteRepository.findUsuarioClienteByNumDocumento(numDocumento);
+        return iClienteRepository.findOne(numDocumento);
     }
 
-    public Short updateByUsuario(String numDocumento, Cliente cliente) {
-        return iClienteRepository.updateByUsuario(numDocumento, cliente);
+    public Cliente updateByUsuarioId(Short usuarioClienteId, Cliente cliente) {
+        return iClienteRepository.updateByUsuarioId(usuarioClienteId, cliente);
+    }
+
+    public short deleteByUsuarioId(Short usuarioClienteId) {
+        return iClienteRepository.deleteByUsuarioId(usuarioClienteId);
     }
 }
