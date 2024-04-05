@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 @Service
 public class FacturaService {
     @Autowired
@@ -15,8 +17,8 @@ public class FacturaService {
         return restTemplate.postForObject(URL, factura, Factura.class, usuarioClienteId);
     }
 
-    public Factura getOneByClienteNumDocumento(String clienteNumDocumento) {
+    public List<Factura> listPagadasByClienteNumDocumento(String clienteNumDocumento) {
         final String URL = "http://COMPRAS-APP/facturas/usuarios/clientes/{clienteNumDocumento}";
-        return restTemplate.getForObject(URL, Factura.class, clienteNumDocumento);
+        return restTemplate.getForObject(URL, List.class, clienteNumDocumento);
     }
 }

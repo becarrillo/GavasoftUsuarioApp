@@ -21,7 +21,11 @@ public class ServicioService {
     }
 
     public Servicio getOne(String servicioName){
-        return restTemplate.getForObject("http://SERVICIO-APP/servicios/"+servicioName, Servicio.class);
+        return restTemplate.getForObject("http://SERVICIO-APP/servicios?nombre="+servicioName, Servicio.class);
+    }
+
+    public Servicio getOneById(String servicioId){
+        return restTemplate.getForObject("http://SERVICIO-APP/servicios/"+servicioId, Servicio.class);
     }
 
     public List<Servicio> getAll() {

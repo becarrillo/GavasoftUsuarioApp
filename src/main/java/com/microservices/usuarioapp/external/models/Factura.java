@@ -21,7 +21,6 @@ public class Factura {
     private String metodoDePago;
     private String carritoDeComprasId;
     @Setter private LocalDateTime fechaHora;
-    @Setter private String nombreCompleto;
     @Setter private List<Agendamiento> agendamientosList;
 
     public Factura(
@@ -44,7 +43,6 @@ public class Factura {
             int total,
             byte estadoDePago,
             String metodoDePago,
-            String nombreCompleto,
             String carritoDeComprasId,
             List<Agendamiento> agendamientosList
     ) {
@@ -55,7 +53,6 @@ public class Factura {
         this.total = total;
         this.estadoDePago = estadoDePago;
         this.metodoDePago = metodoDePago;
-        this.nombreCompleto = nombreCompleto;
         this.carritoDeComprasId = carritoDeComprasId;
         this.agendamientosList = agendamientosList;
     }

@@ -4,6 +4,8 @@ import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Agendamiento;
+import com.microservices.usuarioapp.external.models.Factura;
+import com.microservices.usuarioapp.models.Ingreso;
 import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.external.services.AgendamientoService;
 import com.microservices.usuarioapp.external.services.CarritoService;
@@ -20,10 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.*;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 @RestController
 @CrossOrigin("*")
@@ -230,7 +229,7 @@ public class EmpleadoController {
         return new ResponseEntity<>(this.agendamientoService.listAll(), HttpStatus.OK);
     }
 
-    @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}")
+    @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}/pagados")
     public ResponseEntity<List<Agendamiento>> listarAgendamientosPagadosPorCliente(@PathVariable String numDocumento) {
         return new ResponseEntity<List<Agendamiento>>(
                 this.agendamientoService.listPagadosByClienteNumDocumento(numDocumento),
@@ -238,7 +237,7 @@ public class EmpleadoController {
         );
     }
 
-    @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}")
+    @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}/tomados")
     public ResponseEntity<List<Agendamiento>> listarAgendamientosTomadosPorCliente(@PathVariable String numDocumento) {
         return new ResponseEntity<List<Agendamiento>>(
                 this.agendamientoService.listTomadosByClienteNumDocumento(numDocumento),
@@ -246,17 +245,36 @@ public class EmpleadoController {
         );
     }
 
-    @GetMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/agendamientos")
+    @GetMapping(path = "/menu-asesor/reportes/ingresos/clientes/{numDocumento}")
     public ResponseEntity<Map<String, Object>> obtenerIngresosPorCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
         final Map<String, Object> map = new HashMap<>();
-
+        final List<Factura> facturasList = facturaService.listPagadasByClienteNumDocumento(clienteNumDocumento);
         final Cliente cliente = clienteService.getCliente(clienteNumDocumento);
-        map.put("cliente", cliente);
-        map.put("factura", facturaService.getOneByClienteNumDocumento(clienteNumDocumento));
-        map.put("agendamientos", agendamientoService.listPagadosByClienteNumDocumento(clienteNumDocumento));
 
+        map.put("cliente", cliente);
+
+        List<Agendamiento> fAgendamientos;
+        final List<Ingreso> ingresosList = new ArrayList<Ingreso>();
+        for (int i=0; i < facturasList.size(); i++) {
+            fAgendamientos = facturasList.get(i).getAgendamientosList();
+            for (int j=0; j < fAgendamientos.size(); j++) {
+                final Servicio servicio = servicioService.getOneById(fAgendamientos.get(j).getServicioId());
+                final Ingreso ingreso;
+                ingreso = new Ingreso(
+                        facturasList.get(i).getFacturaId(),
+                        fAgendamientos.get(j).getFechaHora(),
+                        servicio.getServicioId(),
+                        servicio.getServicioNombre(),
+                        servicio.getPrecio()
+                );
+                ingresosList.add(ingreso);
+            }
+        }
+
+        map.put("ingresos", ingresosList);
         return new ResponseEntity<Map<String, Object>>(map, HttpStatus.OK);
     }
+
     @PostMapping(
             path = "/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicio"
     )
