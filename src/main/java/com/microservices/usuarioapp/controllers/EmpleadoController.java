@@ -4,13 +4,9 @@ import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Agendamiento;
-import com.microservices.usuarioapp.external.models.Factura;
-import com.microservices.usuarioapp.models.Ingreso;
+import com.microservices.usuarioapp.external.models.Ingreso;
 import com.microservices.usuarioapp.external.models.Servicio;
-import com.microservices.usuarioapp.external.services.AgendamientoService;
-import com.microservices.usuarioapp.external.services.CarritoService;
-import com.microservices.usuarioapp.external.services.FacturaService;
-import com.microservices.usuarioapp.external.services.ServicioService;
+import com.microservices.usuarioapp.external.services.*;
 import com.microservices.usuarioapp.models.UsuarioRol;
 import com.microservices.usuarioapp.services.ClienteService;
 import com.microservices.usuarioapp.services.EmpleadoService;
@@ -47,6 +43,9 @@ public class EmpleadoController {
 
     @Autowired
     private FacturaService facturaService;
+
+    @Autowired
+    private IngresoService ingresoService;
 
     @PostMapping(path = "/menu-administrador/admin-empleados/crear-cuenta/nuevo")
     public ResponseEntity<String> crearCuentaEmpleado(@RequestBody() Empleado empleado) throws SQLException {
@@ -246,32 +245,23 @@ public class EmpleadoController {
     }
 
     @GetMapping(path = "/menu-asesor/reportes/ingresos/clientes/{numDocumento}")
-    public ResponseEntity<Map<String, Object>> obtenerIngresosPorCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
+    public ResponseEntity<Map<String, Object>> buscarIngresosPorCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
         final Map<String, Object> map = new HashMap<>();
-        final List<Factura> facturasList = facturaService.listPagadasByClienteNumDocumento(clienteNumDocumento);
+        // Hayamos el cliente por su número de documento y lo asignamos en el objeto map por separado de la lista de ingresos
         final Cliente cliente = clienteService.getCliente(clienteNumDocumento);
-
         map.put("cliente", cliente);
 
-        List<Agendamiento> fAgendamientos;
-        final List<Ingreso> ingresosList = new ArrayList<Ingreso>();
-        for (int i=0; i < facturasList.size(); i++) {
-            fAgendamientos = facturasList.get(i).getAgendamientosList();
-            for (int j=0; j < fAgendamientos.size(); j++) {
-                final Servicio servicio = servicioService.getOneById(fAgendamientos.get(j).getServicioId());
-                final Ingreso ingreso;
-                ingreso = new Ingreso(
-                        facturasList.get(i).getFacturaId(),
-                        fAgendamientos.get(j).getFechaHora(),
-                        servicio.getServicioId(),
-                        servicio.getServicioNombre(),
-                        servicio.getPrecio()
-                );
-                ingresosList.add(ingreso);
-            }
+        final List<Ingreso> ingresosList = ingresoService.searchByClienteNumDocumento(clienteNumDocumento);
+        for (Ingreso ingreso : ingresosList) {
+            // Sumamos campos a objeto ingreso actual de la iteración: nombre, precio y url de Servicio correspondiente al servicioId
+            final Servicio currServicio = servicioService.getOneById(ingreso.getServicioId());
+            ingreso.setServicioNombre(currServicio.getServicioNombre());
+            ingreso.setServicioPrecio(currServicio.getPrecio());
+            ingreso.setServicioImgUrl(currServicio.getImgUrl());
         }
 
         map.put("ingresos", ingresosList);
+
         return new ResponseEntity<Map<String, Object>>(map, HttpStatus.OK);
     }
 
