@@ -3,8 +3,6 @@ package com.microservices.usuarioapp.external.models;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import java.io.Serial;
-import java.io.Serializable;
 import java.sql.Time;
 
 @Getter

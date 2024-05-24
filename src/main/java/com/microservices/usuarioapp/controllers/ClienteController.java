@@ -1,28 +1,23 @@
 package com.microservices.usuarioapp.controllers;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
-import com.microservices.usuarioapp.external.models.Carrito;
-import com.microservices.usuarioapp.external.models.Valoracion;
+import com.microservices.usuarioapp.external.models.*;
 import com.microservices.usuarioapp.external.services.*;
-import com.microservices.usuarioapp.external.models.Factura;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.microservices.usuarioapp.entities.Cliente;
-import com.microservices.usuarioapp.external.models.Agendamiento;
-import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.services.ClienteService;
 
 @RestController
-@CrossOrigin("*")
-@RequestMapping("/usuarios/clientes")
+@CrossOrigin(origins="http://localhost:4200", maxAge = 540L)
+@RequestMapping("/v1/usuarios/clientes")
 @Slf4j
 public class ClienteController {
     @Autowired
@@ -43,10 +38,15 @@ public class ClienteController {
     @Autowired
     private FacturaService facturaService;
 
-    @PostMapping(path = "/registro")
+    @PostMapping(path = "/registro/nuevo")
     public ResponseEntity<String> crearCuenta(@RequestBody() Cliente cliente) {
+        //final HttpHeaders responseHeaders = new HttpHeaders();
+        //responseHeaders.set("Access-Control-Allow-Origin", "http://localhost:4200");
         try {
-            return new ResponseEntity<>("Se insertaron con éxito "+clienteService.save(cliente)+" registro(s) de cliente(s)", HttpStatus.CREATED);
+            return new ResponseEntity<>(
+                    "Se insertaron con éxito "+clienteService.save(cliente)+" registro(s) de cliente(s)",
+                    HttpStatus.CREATED
+            );
         } catch (Exception e) {
             throw e;
         }
@@ -194,17 +194,14 @@ public class ClienteController {
             ResponseEntity<Factura> res;
 
             if (generatedFactura != null) {
+                agendamientoService
+                        .setEstadoToFacturado(
+                                factura.getCarritoDeComprasId()
+                        );
                 res = new ResponseEntity<Factura>(
                         generatedFactura,
                         HttpStatus.CREATED
                 );
-
-                Objects.requireNonNull(res.getBody())
-                        .setAgendamientosList(agendamientoService
-                                .setEstadoToFacturado(
-                                        factura.getCarritoDeComprasId()
-                                )
-                        );
                 return res;
             }
             res = new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -212,16 +209,5 @@ public class ClienteController {
         } catch (Exception e) {
             throw e;
         }
-    }
-
-    /*
-    @GetMapping(path = "/{usuario-id}/ingresos-cliente")
-    @CircuitBreaker(name = "clienteIngresosBreaker", fallbackMethod = "clienteIngresosFallback")
-    public ResponseEntity<List<Ingreso>>
-    */
-
-    public ResponseEntity<String> clienteIngresosFallback(Short usuarioId, Exception e) {
-        log.info("El respaldo se ejecuta porque el servicio está inactivo o caído: ", e);
-        return new ResponseEntity<String>("Un respaldo a fallo se ha ejecutado", HttpStatus.OK);
     }
 }

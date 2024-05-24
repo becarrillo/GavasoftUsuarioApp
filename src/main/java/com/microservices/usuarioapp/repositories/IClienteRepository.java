@@ -6,9 +6,10 @@ import java.util.List;
 
 @Repository
 public interface IClienteRepository {
-    int save(Cliente cliente);
+    byte save(Cliente cliente);
     short getUsuarioId(String numDocumento);
     Cliente findOne(String numDocumento);
+    Cliente findOneByEmail(String email);
     Cliente findOneByUsuarioId(Short usuarioId);
     Short findUsuarioClienteIdByNumDocumento(String numDocumento);
     String getClienteNumDocumentoByUsuarioId(Short usuarioClienteId);

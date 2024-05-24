@@ -2,7 +2,6 @@ package com.microservices.usuarioapp.repositories;
 
 import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Usuario;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
@@ -24,16 +23,14 @@ public class ClienteRepository implements IClienteRepository {
     private JdbcTemplate jdbcTemplate;
 
     @Override
-    public int save(Cliente cliente) {
-        cliente.setRol("cliente");    // El rol agregado manualmente a la instancia para no persistirla con rol NULL por defecto
-
+    public byte save(Cliente cliente) {
         byte isAuthDatosAsByte;
         if (cliente.isAutorizacion_datos()) {
             isAuthDatosAsByte = 1;
         } else { isAuthDatosAsByte = 0; }
 
         String SQL;
-        SQL = "IF ? != 0 INSERT into dbo.usuarios VALUES(?,?,?,?,?,?)";
+        SQL = "IF ? != 0 INSERT into dbo.usuarios (apellidos, nombre, email, password, rol, tel) VALUES(?,?,?,?,?,?)";
         jdbcTemplate.update(
                 SQL,
                 isAuthDatosAsByte,
@@ -56,8 +53,11 @@ public class ClienteRepository implements IClienteRepository {
         cliente.setFecha_hora_registro(LocalDateTime.now(ZoneId.of("GMT-5")));  // Hora local (Bogotá) en tiempo real (Timestamp)
 
         // Se persisten los datos de la tabla clientes y se obtiene el número de filas creadas (por defecto es 1 el valor)
-        SQL = "IF ? != 0 INSERT INTO dbo.clientes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
-        return jdbcTemplate.update(
+        SQL = "IF ? != 0 " +
+                "INSERT INTO dbo.clientes " +
+                "(usuario_id,apellidos,nombre,email,password,rol,tel,tipo_documento,num_documento,autorizacion_datos,saldo_favor,fecha_hora_registro) " +
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+        return (byte) jdbcTemplate.update(
                 SQL,
                 isAuthDatosAsByte,
                 clienteUsuario.getUsuario_id(),
@@ -104,6 +104,12 @@ public class ClienteRepository implements IClienteRepository {
         assert bodyRes != null;
         bodyRes.setAutorizacion_datos(true);
         return bodyRes;
+    }
+
+    @Override
+    public Cliente findOneByEmail(String email) {
+        final String SQL = "SELECT * from dbo.clientes WHERE email=?";
+        return jdbcTemplate.queryForObject(SQL, BeanPropertyRowMapper.newInstance(Cliente.class), email);
     }
 
     @Override
@@ -184,11 +190,4 @@ public class ClienteRepository implements IClienteRepository {
         SQL = "DELETE FROM dbo.usuarios WHERE usuario_id=?";
         return (short) jdbcTemplate.update(SQL, usuarioId);
     }
-
-    /*
-    @Override
-    public Collection<Factura> getHistorialByUsuarioId(Short usuarioId) {
-
-    }
-     */
 }

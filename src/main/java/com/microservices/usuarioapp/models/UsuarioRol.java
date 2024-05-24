@@ -1,9 +1,11 @@
 package com.microservices.usuarioapp.models;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
+@AllArgsConstructor
 public class UsuarioRol {
     @Setter
     private Short usuarioId;

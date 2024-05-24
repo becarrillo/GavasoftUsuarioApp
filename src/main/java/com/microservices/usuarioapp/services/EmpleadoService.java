@@ -1,10 +1,10 @@
 package com.microservices.usuarioapp.services;
 
-import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Empleado;
-import com.microservices.usuarioapp.repositories.IClienteRepository;
+import com.microservices.usuarioapp.entities.Usuario;
+import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
+import com.microservices.usuarioapp.models.UsuarioRol;
 import com.microservices.usuarioapp.repositories.IEmpleadoRepository;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.sql.SQLException;
@@ -14,20 +14,12 @@ import java.util.*;
  * @author Brando Elí Carrillo Pérez
  */
 @Service
-@Slf4j
 public class EmpleadoService {
-    @Autowired
-    private IClienteRepository iClienteRepository;
 
     @Autowired
     private IEmpleadoRepository iEmpleadoRepository;
 
-    public void enviarMsjConRabbitMQ(String message) {
-        log.info("El mensaje {} fue enviado con ÉXITO. ", message);
-        //producer.send(message);
-    }
-
-    public short save(Empleado empleado) throws SQLException {
+    public Empleado save(Empleado empleado) throws SQLException {
 
         return iEmpleadoRepository.save(empleado);
     }
@@ -41,23 +33,51 @@ public class EmpleadoService {
         return iEmpleadoRepository.listAll();
     }
 
+    public Empleado getEmpleado(String numDocumento) {
+        return Optional.of(iEmpleadoRepository.findOne(numDocumento))
+            .orElseThrow(ResourceNotFoundException::new);
+    }
+
     public Empleado getEmpleadoByUsuarioId(Short usuarioId) {
-        return iEmpleadoRepository.findOneByUsuarioId(usuarioId);
+        return Optional.of(iEmpleadoRepository.findOneByUsuarioId(usuarioId))
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "No existe el empleado, o no tiene un rol de empleado con ese id de usuario"
+                )
+            )
+        ;
+    }
+
+    public List<Empleado> getEmpleadosByNombre(String nombre) {
+        return Optional.of(iEmpleadoRepository.listByNombre(nombre))
+            .orElseThrow(ResourceNotFoundException::new);
+    }
+
+    public Empleado getEmpleadoByEmail(String email) {
+        return iEmpleadoRepository.findOneByEmail(email);
+    }
+
+    public Usuario getEmpleadoUsuarioByEmail(String email) {
+        return iEmpleadoRepository.getEmpleadoUsuarioByEmail(email);
     }
 
     public String getEmpleadoRolByUsuarioId(Short usuarioEmpleadoId) {
         return iEmpleadoRepository.getEmpleadoRolByUsuarioId(usuarioEmpleadoId);
     }
 
-    public Cliente getClienteByUsuarioId(Short usuarioId) {
-        return iClienteRepository.findOneByUsuarioId(usuarioId);
+    public Short getUsuarioEmpleadoId(String empleadoNumDocumento) {
+        return Optional.of(iEmpleadoRepository.getUsuarioIdByNumDocumento(empleadoNumDocumento))
+            .orElseThrow(ResourceNotFoundException::new);
     }
 
-    public Empleado updateEmpleadoByUsuarioId(Short usuarioEmpleadoId, Empleado empleado) {
+    public List<UsuarioRol> listUsuariosIdWithRolAsNull() {
+        return iEmpleadoRepository.listOnlyUsuarioRolAllWithRolAsNull();
+    }
+
+    public Short updateEmpleadoByUsuarioId(Short usuarioEmpleadoId, Empleado empleado) {
         return iEmpleadoRepository.updateByUsuarioId(usuarioEmpleadoId, empleado);
     }
 
-    public short deleteByUsuarioId(Short usuarioEmpleadoId) {
+    public Short deleteByUsuarioId(Short usuarioEmpleadoId) {
         return iEmpleadoRepository.deleteByUsuarioId(usuarioEmpleadoId);
     }
 }

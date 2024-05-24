@@ -17,25 +17,25 @@ public class ServicioService {
         para la comunicación desde el presente proyecto
     */
     public Servicio save(Servicio servicio) {
-        return restTemplate.postForObject("http://SERVICIO-APP/servicios/agregar/nuevo", servicio, Servicio.class);
+        return restTemplate.postForObject("http://SERVICIO-APP/v1/servicios/agregar/nuevo", servicio, Servicio.class);
     }
 
     public Servicio getOne(String servicioName){
-        return restTemplate.getForObject("http://SERVICIO-APP/servicios?nombre="+servicioName, Servicio.class);
+        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios?nombre="+servicioName, Servicio.class);
     }
 
     public Servicio getOneById(String servicioId){
-        return restTemplate.getForObject("http://SERVICIO-APP/servicios/"+servicioId, Servicio.class);
+        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/"+servicioId, Servicio.class);
     }
 
     public List<Servicio> getAll() {
-        return restTemplate.getForObject("http://SERVICIO-APP/servicios", List.class);
+        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios", List.class);
     }
 
     public Servicio updateOne(String servicioNombre, com.microservices.usuarioapp.external.models.Servicio servicio) {
         final String name = servicioNombre;
         return restTemplate.postForObject(
-                "http://SERVICIO-APP/servicios/{name}/modificar",
+                "http://SERVICIO-APP/v1/servicios/{name}/modificar",
                 servicio,
                 Servicio.class,
                 name
@@ -44,7 +44,7 @@ public class ServicioService {
 
     public String deleteOneById(String servicioId) {
         final String id = servicioId;
-        return restTemplate.getForObject("http://SERVICIO-APP/servicios/{id}/eliminar", String.class, id);
+        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/{id}/eliminar", String.class, id);
     }
 
 }

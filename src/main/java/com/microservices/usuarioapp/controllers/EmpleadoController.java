@@ -2,27 +2,35 @@ package com.microservices.usuarioapp.controllers;
 
 import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.entities.Empleado;
+import com.microservices.usuarioapp.entities.Usuario;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Agendamiento;
 import com.microservices.usuarioapp.external.models.Ingreso;
 import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.external.services.*;
+import com.microservices.usuarioapp.models.UsuarioDto;
 import com.microservices.usuarioapp.models.UsuarioRol;
 import com.microservices.usuarioapp.services.ClienteService;
 import com.microservices.usuarioapp.services.EmpleadoService;
+
+//import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 
+import org.springframework.http.HttpHeaders;
+
 @RestController
-@CrossOrigin("*")
-@RequestMapping(path = "/usuarios/empleados")
+@CrossOrigin(origins = "http://localhost:4200", maxAge = 540L)
+@RequestMapping(path = "/v1/usuarios/empleados")
 @Slf4j
 public class EmpleadoController {
 
@@ -32,6 +40,7 @@ public class EmpleadoController {
     @Autowired
     private ClienteService clienteService;
 
+
     @Autowired
     private ServicioService servicioService;
 
@@ -39,27 +48,24 @@ public class EmpleadoController {
     private AgendamientoService agendamientoService;
 
     @Autowired
-    private CarritoService carritoService;
-
-    @Autowired
-    private FacturaService facturaService;
-
-    @Autowired
     private IngresoService ingresoService;
 
+
+
     @PostMapping(path = "/menu-administrador/admin-empleados/crear-cuenta/nuevo")
-    public ResponseEntity<String> crearCuentaEmpleado(@RequestBody() Empleado empleado) throws SQLException {
-        return new ResponseEntity<String>(
-                "Se insertaron "+empleadoService.save(empleado)+" registro(s) con éxito de empleado(s).",
-                HttpStatus.CREATED
-        );
+    public ResponseEntity<Empleado> crearCuentaEmpleado(@RequestBody() Empleado empleado) throws SQLException {
+        final HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.set("Vary", "Origin");
+        return new ResponseEntity<Empleado>(
+                empleadoService.save(empleado),
+                HttpStatus.CREATED);
     }
 
     @PostMapping(path = "/menu-asesor/solicitudes/clientes/crear-cuenta")
     public ResponseEntity<String> crearCuentaCliente(
-            @RequestBody() Cliente cliente
-    ) throws SQLException {
-        return new ResponseEntity<String>(clienteService.save(cliente)+" registro(s) con éxito de cliente(s)", HttpStatus.CREATED);
+            @RequestBody() Cliente cliente) throws SQLException {
+        return new ResponseEntity<String>(clienteService.save(cliente) + " registro(s) con éxito de cliente(s)",
+                HttpStatus.CREATED);
     }
 
     @GetMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}")
@@ -72,66 +78,103 @@ public class EmpleadoController {
         return new ResponseEntity<>(cliente, HttpStatus.OK);
     }
 
-    @PutMapping(path = "/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}/asignar-rol")
+    @PostMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}/asignar-rol")
     public ResponseEntity<Short> asignarRol(
-            @PathVariable("usuarioEmpleadoId") Short usuarioEmpleadoId,
+            @PathVariable String empleadoNumDocumento,
             @RequestBody UsuarioRol usuarioRol
-    ) {
-        usuarioRol.setUsuarioId(usuarioEmpleadoId);
+        ) {
         return new ResponseEntity<Short>(
                 empleadoService.assignRol(usuarioRol.getUsuarioId(), usuarioRol.getRol()),
                 HttpStatus.OK
         );
     }
 
-    @GetMapping(path = "/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}")
-    public ResponseEntity<Empleado> consultarEmpleado(@PathVariable Short usuarioEmpleadoId) {
+    @GetMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}")
+    public ResponseEntity<Empleado> consultarEmpleado(@PathVariable String empleadoNumDocumento) {
         final Empleado empleado;
-        try {
-            empleado  = empleadoService.getEmpleadoByUsuarioId(usuarioEmpleadoId);
-        } catch (Exception ex) {
-            throw ex;
-        }
-        return new ResponseEntity<Empleado>(empleado, HttpStatus.FOUND);
+        empleado = empleadoService.getEmpleado(empleadoNumDocumento);
+        return new ResponseEntity<Empleado>(empleado, HttpStatus.OK);
+    }
+    
+    @GetMapping(path = "/menu-administrador/admin-empleados/consultar/por-email/{empleadoEmail}")
+    public ResponseEntity<Empleado> consultarEmpleadoPorEmail(@PathVariable("empleadoEmail") String email) {
+    	final Empleado empleado = empleadoService.getEmpleadoByEmail(email);
+    	return new ResponseEntity<Empleado>(empleado, HttpStatus.OK);
     }
 
-    @PostMapping(path = "/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}/modificar")
-    public ResponseEntity<Empleado> modificarCuentaEmpleado(
-            @PathVariable Short usuarioEmpleadoId,
-            @RequestBody Empleado empleado
-    ) {
-        empleado.setUsuario_id(usuarioEmpleadoId);
-
-        final Empleado savedEmpleado;
-        try {
-            savedEmpleado = empleadoService.updateEmpleadoByUsuarioId(usuarioEmpleadoId, empleado);
-        } catch (Exception ex) {
-            throw ex;
-        }
-        return new ResponseEntity<Empleado>(savedEmpleado, HttpStatus.OK);
+    @GetMapping(path = "/menu-administrador/admin-empleados/consultar/login/{email}")
+    public ResponseEntity<UsuarioDto> obtenerUsuarioDtoPorEmail(@PathVariable String email) {
+        final Usuario usuario = empleadoService.getEmpleadoUsuarioByEmail(email);
+        
+        return new ResponseEntity<UsuarioDto>(
+            new UsuarioDto(usuario.getEmail(), usuario.getPassword(), usuario.getRol()),
+            HttpStatus.OK
+        );
     }
 
-    @DeleteMapping(path = "/menu-administrador/admin-empleados/empleados/{usuarioEmpleadoId}/eliminar")
-    public ResponseEntity<Short> eliminarCuentaEmpleado(@PathVariable Short usuarioEmpleadoId) {
-        final short rows;
+    @PutMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}/modificar")
+    public ResponseEntity<Short> modificarCuentaEmpleado(
+            @PathVariable String empleadoNumDocumento,
+            @RequestBody Empleado empleado) {
+        
+        final Short rows;
         try {
-            rows = empleadoService.deleteByUsuarioId(usuarioEmpleadoId);
+            rows = empleadoService.updateEmpleadoByUsuarioId(
+                empleadoService.getUsuarioEmpleadoId(empleadoNumDocumento),
+                empleado
+            );
         } catch (Exception ex) {
             throw ex;
         }
         return new ResponseEntity<Short>(rows, HttpStatus.OK);
     }
 
-    @GetMapping
+    @DeleteMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}/eliminar")
+    public ResponseEntity<Short> eliminarCuentaEmpleado(@PathVariable String empleadoNumDocumento) {
+        final Short rows;
+        try {
+            rows = empleadoService.deleteByUsuarioId(
+                    empleadoService.getUsuarioEmpleadoId(empleadoNumDocumento));
+        } catch (Exception ex) {
+            throw ex;
+        }
+        return new ResponseEntity<Short>(rows, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/menu-administrador/admin-empleados/listar")
     public ResponseEntity<List<Empleado>> listarEmpleados() {
         return new ResponseEntity<List<Empleado>>(empleadoService.getAllEmpleados(), HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/menu-administrador/admin-empleados/consultar/por-nombre/{empleadoNombre}")
+    public ResponseEntity<List<Empleado>> listarEmpleadosPorNombre(@PathVariable String empleadoNombre) {
+        return new ResponseEntity<List<Empleado>>(
+                empleadoService.getEmpleadosByNombre(empleadoNombre),
+                HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/menu-administrador/admin-empleados/listar/sin-rol")
+    public ResponseEntity<List<Empleado>> listarPorRolNull() {
+        List<Empleado> empleadosWithRolAsNull = new ArrayList<Empleado>();
+        List<UsuarioRol> usuariosIdWithRolAsNull = empleadoService.listUsuariosIdWithRolAsNull();
+        try {
+            usuariosIdWithRolAsNull.forEach(ur -> empleadosWithRolAsNull
+                    .add(empleadoService.getEmpleadoByUsuarioId(ur.getUsuarioId())));
+        } catch (Exception e) {
+            throw e;
+        }
+        return new ResponseEntity<List<Empleado>>(empleadosWithRolAsNull, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}/obtener-id-de-usuario")
+    public ResponseEntity<Short> obtenerUsuarioIdDeEmpleado(@PathVariable String empleadoNumDocumento) {
+        return new ResponseEntity<Short>(empleadoService.getUsuarioEmpleadoId(empleadoNumDocumento), HttpStatus.OK);
     }
 
     @PutMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/modificar")
     public ResponseEntity<Cliente> modificarCuentaCliente(
             @PathVariable("numDocumento") String clienteNumDocumento,
-            @RequestBody Cliente cliente
-    ) {
+            @RequestBody Cliente cliente) {
         final Short usuarioClienteId = clienteService
                 .getUsuarioClienteIdByNumDocumento(clienteNumDocumento);
         cliente.setUsuario_id(usuarioClienteId);
@@ -162,7 +205,8 @@ public class EmpleadoController {
     public ResponseEntity<String> agregarServicio(@RequestBody() Servicio servicio) throws IOException {
         final Servicio myServicio = servicioService.save(servicio);
         if (myServicio == null) {
-            throw new RuntimeException("El cuerpo de la petición contiene campos de datos con restricción definida por duplicidad, no se guardó el servicio");
+            throw new RuntimeException(
+                    "El cuerpo de la petición contiene campos de datos con restricción definida por duplicidad, no se guardó el servicio");
         }
         return new ResponseEntity<String>(myServicio.toString(), HttpStatus.CREATED);
     }
@@ -178,7 +222,8 @@ public class EmpleadoController {
     }
 
     @PostMapping(path = "/menu-administrador/admin-servicios/consultar/{name}/modificar")
-    public Servicio modificarServicio(@PathVariable("name") String servicioNombre, @RequestBody Servicio servicio) throws IOException {
+    public Servicio modificarServicio(@PathVariable("name") String servicioNombre, @RequestBody Servicio servicio)
+            throws IOException {
         return servicioService.updateOne(servicioNombre, servicio);
     }
 
@@ -199,19 +244,17 @@ public class EmpleadoController {
     @PostMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/agendar-servicio")
     public ResponseEntity<Agendamiento> agendarServicio(
             @PathVariable String numDocumento,
-            @RequestBody Agendamiento agendamiento
-    ) {
-        if (
-                agendamiento.getUsuarioClienteId() != null &&
-                        !agendamiento
-                                .getUsuarioClienteId()
-                                .equals(clienteService.getUsuarioClienteIdByNumDocumento(numDocumento))
-        ) {
-            throw new NoSuchElementException("El id de usuario del cliente consultado no coincide con el del agendamiento");
+            @RequestBody Agendamiento agendamiento) {
+        if (agendamiento.getUsuarioClienteId() != null &&
+                !agendamiento
+                        .getUsuarioClienteId()
+                        .equals(clienteService.getUsuarioClienteIdByNumDocumento(numDocumento))) {
+            throw new NoSuchElementException(
+                    "El id de usuario del cliente consultado no coincide con el del agendamiento");
         }
 
         final Agendamiento newAgendamiento;
-        
+
         try {
             newAgendamiento = agendamientoService.save(agendamiento);
             if (newAgendamiento == null) {
@@ -232,52 +275,56 @@ public class EmpleadoController {
     public ResponseEntity<List<Agendamiento>> listarAgendamientosPagadosPorCliente(@PathVariable String numDocumento) {
         return new ResponseEntity<List<Agendamiento>>(
                 this.agendamientoService.listPagadosByClienteNumDocumento(numDocumento),
-                HttpStatus.OK
-        );
+                HttpStatus.OK);
     }
 
     @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}/tomados")
     public ResponseEntity<List<Agendamiento>> listarAgendamientosTomadosPorCliente(@PathVariable String numDocumento) {
         return new ResponseEntity<List<Agendamiento>>(
                 this.agendamientoService.listTomadosByClienteNumDocumento(numDocumento),
-                HttpStatus.OK
-        );
+                HttpStatus.OK);
     }
 
     @GetMapping(path = "/menu-asesor/reportes/ingresos/clientes/{numDocumento}")
-    public ResponseEntity<Map<String, Object>> buscarIngresosPorCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
+    //@CircuitBreaker(name = "clienteIngresosBreaker", fallbackMethod = "clienteIngresosFallback")
+    public ResponseEntity<Map<String, Object>> buscarClienteIngresos(
+            @PathVariable("numDocumento") String clienteNumDocumento) {
         final Map<String, Object> map = new HashMap<>();
-        // Hayamos el cliente por su número de documento y lo asignamos en el objeto map por separado de la lista de ingresos
+        // Hayamos el cliente por su número de documento y lo asignamos en el objeto map
+        // por separado de la lista de ingresos
         final Cliente cliente = clienteService.getCliente(clienteNumDocumento);
         map.put("cliente", cliente);
 
-        final List<Ingreso> ingresosList = ingresoService.searchByClienteNumDocumento(clienteNumDocumento);
+        List<Ingreso> ingresosList;
+        ingresosList = List.of();
+        try {
+            ingresosList = ingresoService.searchByClienteNumDocumento(clienteNumDocumento);
+        } catch (Exception e) {
+            throw new RuntimeException("Se ha enviado un mensaje en el respaldo a fallo de la funcionalidad");
+        }
+
         for (Ingreso ingreso : ingresosList) {
-            // Sumamos campos a objeto ingreso actual de la iteración: nombre, precio y url de Servicio correspondiente al servicioId
+            // Sumamos campos a objeto ingreso actual de la iteración: nombre, precio y url
+            // de Servicio correspondiente al servicioId
             final Servicio currServicio = servicioService.getOneById(ingreso.getServicioId());
             ingreso.setServicioNombre(currServicio.getServicioNombre());
             ingreso.setServicioPrecio(currServicio.getPrecio());
             ingreso.setServicioImgUrl(currServicio.getImgUrl());
         }
-
         map.put("ingresos", ingresosList);
 
         return new ResponseEntity<Map<String, Object>>(map, HttpStatus.OK);
     }
 
-    @PostMapping(
-            path = "/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicio"
-    )
+    @PostMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicio")
     public ResponseEntity<Agendamiento> reagendarServicio(
             @PathVariable("numDocumento") String clienteNumDocumento,
-            @RequestBody Agendamiento agendamiento
-    ) {
+            @RequestBody Agendamiento agendamiento) {
         Agendamiento newAgendamiento;
         try {
-            if (
-                    agendamiento.getUsuarioClienteId().equals(clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento)) &&
-                            agendamiento.getEstado().equals("pago")
-            ) {
+            if (agendamiento.getUsuarioClienteId()
+                    .equals(clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento)) &&
+                    agendamiento.getEstado().equals("pago")) {
                 newAgendamiento = agendamientoService.updateOne(agendamiento);
                 return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.OK);
             }
@@ -290,20 +337,25 @@ public class EmpleadoController {
     @DeleteMapping(path = "/menu-asesor/solicitudes/clientes/{clienteNumDocumento}/cancelar-servicios/agendamientos/{agendamientoId}")
     public ResponseEntity<String> cancelarServicioAgendado(
             @PathVariable("clienteNumDocumento") String usuarioClienteNumDocumento,
-            @PathVariable("agendamientoId") String agendamientoId
-    ) {
+            @PathVariable("agendamientoId") String agendamientoId) {
         final String delAgendamientoId;
-        if (!agendamientoService.listByUsuarioClienteId(clienteService.getUsuarioClienteIdByNumDocumento(usuarioClienteNumDocumento)).isEmpty()) {
+        if (!agendamientoService
+                .listByUsuarioClienteId(clienteService.getUsuarioClienteIdByNumDocumento(usuarioClienteNumDocumento))
+                .isEmpty()) {
             delAgendamientoId = agendamientoService.cancelOneById(agendamientoId);
             if (delAgendamientoId != null) {
                 return new ResponseEntity<String>(delAgendamientoId, HttpStatus.OK);
             } else {
                 throw new ResourceNotFoundException(
-                        "El agendamiento con id del cuerpo de petición para cancelar el servicio no se eliminó porque no existe"
-                );
+                        "El agendamiento con id del cuerpo de petición para cancelar el servicio no se eliminó porque no existe");
             }
         } else {
             throw new RuntimeException();
         }
+    }
+
+    public ResponseEntity<String> clienteIngresosFallback(Short usuarioId, Exception e) {
+        log.info("El respaldo se ejecuta porque el servicio está inactivo o caído: ", e);
+        return new ResponseEntity<String>("Un respaldo a fallo se ha ejecutado", HttpStatus.OK);
     }
 }

@@ -12,7 +12,6 @@ import java.util.List;
 @NoArgsConstructor
 public class Factura {
     @Setter private int facturaId;
-    private String clienteTipoDocumento;
     private String clienteNumDocumento;
     @Setter private Short iva;
     @Setter private int total;
@@ -21,15 +20,12 @@ public class Factura {
     private String metodoDePago;
     private String carritoDeComprasId;
     @Setter private LocalDateTime fechaHora;
-    @Setter private List<Agendamiento> agendamientosList;
 
     public Factura(
-            String clienteTipoDocumento,
             String clienteNumDocumento,
             String metodoDePago,
             String carritoDeComprasId
     ) {
-        this.clienteTipoDocumento = clienteTipoDocumento;
         this.clienteNumDocumento = clienteNumDocumento;
         this.metodoDePago = metodoDePago;
         this.carritoDeComprasId = carritoDeComprasId;
@@ -43,17 +39,14 @@ public class Factura {
             int total,
             byte estadoDePago,
             String metodoDePago,
-            String carritoDeComprasId,
-            List<Agendamiento> agendamientosList
+            String carritoDeComprasId
     ) {
         this.facturaId = facturaId;
-        this.clienteTipoDocumento = clienteTipoDocumento;
         this.clienteNumDocumento = clienteNumDocumento;
         this.iva = iva;
         this.total = total;
         this.estadoDePago = estadoDePago;
         this.metodoDePago = metodoDePago;
         this.carritoDeComprasId = carritoDeComprasId;
-        this.agendamientosList = agendamientosList;
     }
 }

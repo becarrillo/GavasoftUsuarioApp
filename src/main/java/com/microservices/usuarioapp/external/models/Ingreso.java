@@ -4,13 +4,11 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Ingreso {
     private int facturaId;
     private LocalDateTime fechaHoraDelServicio;
@@ -25,29 +23,13 @@ public class Ingreso {
     public Ingreso(
             int facturaId,
             LocalDateTime fechaHoraDelServicio,
-            String servicioId
-    ) {
-        this.facturaId = facturaId;
-        this.fechaHoraDelServicio = fechaHoraDelServicio;
-        this.servicioId = servicioId;
-        this.fechaDeConsulta = LocalDate.now(ZoneId.of("GMT-5"));
-    }
-
-    public Ingreso(
-            int facturaId,
-            LocalDateTime fechaHoraDelServicio,
             String servicioId,
-            String servicioNombre,
-            int servicioPrecio,
-            String servicioImgUrl
+            LocalDate fechaDeConsulta
     ) {
         this.facturaId = facturaId;
         this.fechaHoraDelServicio = fechaHoraDelServicio;
         this.servicioId = servicioId;
-        this.servicioNombre = servicioNombre;
-        this.servicioPrecio = servicioPrecio;
-        this.servicioImgUrl = servicioImgUrl;
-        this.fechaDeConsulta = LocalDate.now(ZoneId.of("GMT-5"));
+        this.fechaDeConsulta = fechaDeConsulta;
     }
 
     public Ingreso(
@@ -57,8 +39,7 @@ public class Ingreso {
             String servicioNombre,
             int servicioPrecio,
             String servicioImgUrl,
-            String clienteTipoDocumento,
-            String clienteNumDocumento
+            LocalDate fechaDeConsulta
     ) {
         this.facturaId = facturaId;
         this.fechaHoraDelServicio = fechaHoraDelServicio;
@@ -66,8 +47,26 @@ public class Ingreso {
         this.servicioNombre = servicioNombre;
         this.servicioPrecio = servicioPrecio;
         this.servicioImgUrl = servicioImgUrl;
-        this.clienteTipoDocumento = clienteTipoDocumento;
+        this.fechaDeConsulta = fechaDeConsulta;
+    }
+
+    public Ingreso(
+            int facturaId,
+            LocalDateTime fechaHoraDelServicio,
+            String servicioId,
+            String servicioNombre,
+            int servicioPrecio,
+            String servicioImgUrl,
+            String clienteNumDocumento,
+            LocalDate fechaDeConsulta
+    ) {
+        this.facturaId = facturaId;
+        this.fechaHoraDelServicio = fechaHoraDelServicio;
+        this.servicioId = servicioId;
+        this.servicioNombre = servicioNombre;
+        this.servicioPrecio = servicioPrecio;
+        this.servicioImgUrl = servicioImgUrl;
         this.clienteNumDocumento = clienteNumDocumento;
-        this.fechaDeConsulta = LocalDate.now(ZoneId.of("GMT-5"));
+        this.fechaDeConsulta = fechaDeConsulta;
     }
 }

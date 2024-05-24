@@ -1,6 +1,7 @@
 package com.microservices.usuarioapp.entities;
 
-import jdk.jfr.Unsigned;
+import org.springframework.data.relational.core.mapping.Table;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,8 +12,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@Table(name = "usuarios")
 public class Usuario {
-    @Unsigned
     private Short usuario_id;
     private String apellidos;
     private String nombre;
