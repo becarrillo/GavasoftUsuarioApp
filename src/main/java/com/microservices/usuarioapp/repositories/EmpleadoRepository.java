@@ -2,14 +2,12 @@ package com.microservices.usuarioapp.repositories;
 
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.entities.Usuario;
-import com.microservices.usuarioapp.models.UsuarioRol;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -132,21 +130,14 @@ public class EmpleadoRepository implements IEmpleadoRepository {
         }
 
         @Override
-        public List<UsuarioRol> listOnlyUsuarioRolAllWithRolAsNull() {
-                List<UsuarioRol> usuariosRolList = new ArrayList<UsuarioRol>();
-                
-                final String SQL = "SELECT usuario_id FROM dbo.empleados WHERE rol=NULL";
-                final List<Short> empleadosWithoutRolUsuarioId = jdbcTemplate.query(
+        public List<Empleado> listOnlyEmpleadosWithRolAsNull() {
+                String SQL = "SELECT * FROM dbo.empleados WHERE rol IS NULL";
+                final List<Empleado> empleadosWithoutRol = jdbcTemplate.query(
                         SQL,
-                        BeanPropertyRowMapper.newInstance(Short.class)
+                        BeanPropertyRowMapper.newInstance(Empleado.class)
                 );
 
-                for (var usuarioId : empleadosWithoutRolUsuarioId) {
-                        usuariosRolList.add(
-                                new UsuarioRol(usuarioId, null)
-                        );
-                }
-                return usuariosRolList;
+                return empleadosWithoutRol;
         }
 
         @Override

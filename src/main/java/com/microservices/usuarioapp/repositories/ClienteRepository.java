@@ -77,7 +77,7 @@ public class ClienteRepository implements IClienteRepository {
 
     @Override
     public List<Cliente> listAll() {
-        final String SQL = "SELECT * FROM dbo.usuarios";
+        final String SQL = "SELECT * FROM dbo.clientes";
         return jdbcTemplate.query(SQL, BeanPropertyRowMapper.newInstance(Cliente.class));
     }
 
@@ -136,6 +136,12 @@ public class ClienteRepository implements IClienteRepository {
     }
 
     @Override
+    public Integer getClienteSaldoFavor(String clienteNumDocumento) {
+        final String SQL = "SELECT saldo_favor from dbo.clientes WHERE num_documento=?";
+        return jdbcTemplate.queryForObject(SQL, Integer.class);
+    }
+
+    @Override
     public String getClienteTipoDocumentoByUsuarioId(Short usuarioClienteId) {
         final String SQL = "SELECT tipo_documento from dbo.clientes WHERE usuario_id=?";
         return jdbcTemplate.queryForObject(SQL,
@@ -164,7 +170,7 @@ public class ClienteRepository implements IClienteRepository {
 
     @Override
     public Cliente updateByUsuarioId(Short usuarioClienteId, Cliente cliente) {
-        String SQL = "UPDATE dbo.clientes SET cliente_apellidos=?, cliente_nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, autorizacion_datos=?, saldo_favor=? WHERE usuario_id=?";
+        String SQL = "UPDATE dbo.clientes SET apellidos=?, nombre=?, email=?, password=?, rol=?, tel=?, tipo_documento=?, num_documento=?, autorizacion_datos=?, saldo_favor=? WHERE usuario_id=?";
         jdbcTemplate.update(
                 SQL,
                 cliente.getApellidos(),

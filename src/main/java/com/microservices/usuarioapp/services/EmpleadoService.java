@@ -69,8 +69,8 @@ public class EmpleadoService {
             .orElseThrow(ResourceNotFoundException::new);
     }
 
-    public List<UsuarioRol> listUsuariosIdWithRolAsNull() {
-        return iEmpleadoRepository.listOnlyUsuarioRolAllWithRolAsNull();
+    public List<Empleado> listEmpleadosWithRolAsNull() {
+        return iEmpleadoRepository.listOnlyEmpleadosWithRolAsNull();
     }
 
     public Short updateEmpleadoByUsuarioId(Short usuarioEmpleadoId, Empleado empleado) {

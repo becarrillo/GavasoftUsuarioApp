@@ -20,14 +20,15 @@ public class ServicioService {
         return restTemplate.postForObject("http://SERVICIO-APP/v1/servicios/agregar/nuevo", servicio, Servicio.class);
     }
 
-    public Servicio getOne(String servicioName){
-        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios?nombre="+servicioName, Servicio.class);
+    public Servicio getOne(String servicioName) {
+        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/consultar-por-nombre/"+servicioName, Servicio.class);
     }
 
     public Servicio getOneById(String servicioId){
         return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/"+servicioId, Servicio.class);
     }
 
+    @SuppressWarnings("unchecked")
     public List<Servicio> getAll() {
         return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios", List.class);
     }

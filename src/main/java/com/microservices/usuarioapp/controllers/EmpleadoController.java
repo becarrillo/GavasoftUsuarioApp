@@ -5,15 +5,17 @@ import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.entities.Usuario;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.Agendamiento;
+import com.microservices.usuarioapp.external.models.Factura;
 import com.microservices.usuarioapp.external.models.Ingreso;
 import com.microservices.usuarioapp.external.models.Servicio;
 import com.microservices.usuarioapp.external.services.*;
 import com.microservices.usuarioapp.models.UsuarioDto;
 import com.microservices.usuarioapp.models.UsuarioRol;
+import com.microservices.usuarioapp.responses.ApiResponse;
 import com.microservices.usuarioapp.services.ClienteService;
 import com.microservices.usuarioapp.services.EmpleadoService;
-
-//import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +25,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.*;
 
 import org.springframework.http.HttpHeaders;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 540L)
+@CrossOrigin(origins = "https://gavasoft.firebaseapp.com", maxAge = 540L)
 @RequestMapping(path = "/v1/usuarios/empleados")
 @Slf4j
 public class EmpleadoController {
@@ -48,8 +52,7 @@ public class EmpleadoController {
     private AgendamientoService agendamientoService;
 
     @Autowired
-    private IngresoService ingresoService;
-
+    private FacturaService facturaService;
 
 
     @PostMapping(path = "/menu-administrador/admin-empleados/crear-cuenta/nuevo")
@@ -61,26 +64,8 @@ public class EmpleadoController {
                 HttpStatus.CREATED);
     }
 
-    @PostMapping(path = "/menu-asesor/solicitudes/clientes/crear-cuenta")
-    public ResponseEntity<String> crearCuentaCliente(
-            @RequestBody() Cliente cliente) throws SQLException {
-        return new ResponseEntity<String>(clienteService.save(cliente) + " registro(s) con éxito de cliente(s)",
-                HttpStatus.CREATED);
-    }
-
-    @GetMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}")
-    public ResponseEntity<Cliente> consultarCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
-        final Cliente cliente = clienteService.getOne(clienteNumDocumento);
-
-        if (cliente == null) {
-            throw new ResourceNotFoundException("El cliente no existe");
-        }
-        return new ResponseEntity<>(cliente, HttpStatus.OK);
-    }
-
-    @PostMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}/asignar-rol")
+    @PostMapping(path = "/menu-administrador/admin-empleados/asignar-rol")
     public ResponseEntity<Short> asignarRol(
-            @PathVariable String empleadoNumDocumento,
             @RequestBody UsuarioRol usuarioRol
         ) {
         return new ResponseEntity<Short>(
@@ -155,37 +140,14 @@ public class EmpleadoController {
 
     @GetMapping(path = "/menu-administrador/admin-empleados/listar/sin-rol")
     public ResponseEntity<List<Empleado>> listarPorRolNull() {
-        List<Empleado> empleadosWithRolAsNull = new ArrayList<Empleado>();
-        List<UsuarioRol> usuariosIdWithRolAsNull = empleadoService.listUsuariosIdWithRolAsNull();
-        try {
-            usuariosIdWithRolAsNull.forEach(ur -> empleadosWithRolAsNull
-                    .add(empleadoService.getEmpleadoByUsuarioId(ur.getUsuarioId())));
-        } catch (Exception e) {
-            throw e;
-        }
+        List<Empleado> empleadosWithRolAsNull = empleadoService.listEmpleadosWithRolAsNull();
+        
         return new ResponseEntity<List<Empleado>>(empleadosWithRolAsNull, HttpStatus.OK);
     }
 
     @GetMapping(path = "/menu-administrador/admin-empleados/consultar/{empleadoNumDocumento}/obtener-id-de-usuario")
     public ResponseEntity<Short> obtenerUsuarioIdDeEmpleado(@PathVariable String empleadoNumDocumento) {
         return new ResponseEntity<Short>(empleadoService.getUsuarioEmpleadoId(empleadoNumDocumento), HttpStatus.OK);
-    }
-
-    @PutMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/modificar")
-    public ResponseEntity<Cliente> modificarCuentaCliente(
-            @PathVariable("numDocumento") String clienteNumDocumento,
-            @RequestBody Cliente cliente) {
-        final Short usuarioClienteId = clienteService
-                .getUsuarioClienteIdByNumDocumento(clienteNumDocumento);
-        cliente.setUsuario_id(usuarioClienteId);
-
-        final Cliente savedCliente;
-        try {
-            savedCliente = clienteService.updateByUsuarioId(cliente.getUsuario_id(), cliente);
-        } catch (Exception ex) {
-            throw ex;
-        }
-        return new ResponseEntity<Cliente>(savedCliente, HttpStatus.OK);
     }
 
     @DeleteMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/eliminar")
@@ -201,19 +163,26 @@ public class EmpleadoController {
         return new ResponseEntity<Short>(rows, HttpStatus.OK);
     }
 
-    @PostMapping(path = "/menu-administrador/servicios/agregar/nuevo")
-    public ResponseEntity<String> agregarServicio(@RequestBody() Servicio servicio) throws IOException {
+    @PostMapping(path = "/menu-administrador/admin-servicios/agregar/nuevo")
+    @Retry(name = "RetryAddingServicio", fallbackMethod = "retryAddingServicioFallback")
+    public ResponseEntity<Servicio> agregarServicio(@RequestBody Servicio servicio) throws IOException {
         final Servicio myServicio = servicioService.save(servicio);
         if (myServicio == null) {
             throw new RuntimeException(
-                    "El cuerpo de la petición contiene campos de datos con restricción definida por duplicidad, no se guardó el servicio");
+                "El cuerpo de la petición contiene campos de datos con restricción definida por duplicidad, no se guardó el servicio");
         }
-        return new ResponseEntity<String>(myServicio.toString(), HttpStatus.CREATED);
+        return new ResponseEntity<Servicio>(myServicio, HttpStatus.CREATED);
     }
 
-    @GetMapping(path = "/menu-administrador/servicios/consultar/{name}")
+    @GetMapping(path = "/menu-administrador/admin-servicios/consultar-por-nombre/{name}")
+    @Retry(name = "RetryServicioByNameQuery", fallbackMethod = "servicioByNameQueryFallback")
     public ResponseEntity<Servicio> consultarServicio(@PathVariable("name") String servicioNombre) throws IOException {
-        final Servicio servicio = servicioService.getOne(servicioNombre);
+        final Servicio servicio = servicioService.getOne(
+            URLDecoder.decode(
+                servicioNombre.replace('+', ' '),
+                StandardCharsets.UTF_8
+            )
+        );
 
         if (servicio != null) {
             return new ResponseEntity<Servicio>(servicio, HttpStatus.OK);
@@ -222,27 +191,47 @@ public class EmpleadoController {
     }
 
     @PostMapping(path = "/menu-administrador/admin-servicios/consultar/{name}/modificar")
+    @Retry(name = "RetryUpdatingServicio", fallbackMethod = "updatingServicioFallback")
     public Servicio modificarServicio(@PathVariable("name") String servicioNombre, @RequestBody Servicio servicio)
             throws IOException {
         return servicioService.updateOne(servicioNombre, servicio);
     }
 
     @DeleteMapping(path = "/menu-administrador/admin-servicios/consultar/{id}/eliminar")
+    @Retry(name = "RetryDeletingServicio", fallbackMethod = "deletingServicioFallback")
     public ResponseEntity<String> eliminarServicio(@PathVariable("id") String servicioId) {
         final String delServiceId = servicioService.deleteOneById(servicioId);
         if (delServiceId != null) {
-            return new ResponseEntity<>(delServiceId, HttpStatus.OK);
+            return new ResponseEntity<String>(delServiceId, HttpStatus.OK);
         }
         throw new ResourceNotFoundException("El Servicio con el id no existe, no se eliminará registro alguno");
     }
 
     @GetMapping(path = "/listar-servicios")
+    @Retry(name = "RetryListingServicios", fallbackMethod = "listingServiciosFallback")
     public ResponseEntity<List<Servicio>> listarServicios() {
-        return new ResponseEntity<>(servicioService.getAll(), HttpStatus.OK);
+        return new ResponseEntity<List<Servicio>>(servicioService.getAll(), HttpStatus.OK);
+    }
+
+    @CircuitBreaker(name = "SchedulingServicioCircuitBreaker", fallbackMethod = "schedulingServicioFallback")
+    @PostMapping(path = "/menu-administrador/admin-agenda/agendar-servicio/nuevo")
+    public ResponseEntity<Agendamiento> agendarServicioByRoleAdmin(@RequestBody Agendamiento agendamiento) {
+        Agendamiento newAgendamiento;
+
+        try {
+            newAgendamiento = agendamientoService.save(agendamiento);
+            if (newAgendamiento == null) {
+                throw new ResourceNotFoundException("El cliente con el id de usuario del cuerpo de petición no existe");
+            }
+            return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.CREATED);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/agendar-servicio")
-    public ResponseEntity<Agendamiento> agendarServicio(
+    public ResponseEntity<Agendamiento> agendarServicioByRoleAsesor(
             @PathVariable String numDocumento,
             @RequestBody Agendamiento agendamiento) {
         if (agendamiento.getUsuarioClienteId() != null &&
@@ -252,7 +241,7 @@ public class EmpleadoController {
             throw new NoSuchElementException(
                     "El id de usuario del cliente consultado no coincide con el del agendamiento");
         }
-
+        
         final Agendamiento newAgendamiento;
 
         try {
@@ -267,15 +256,29 @@ public class EmpleadoController {
     }
 
     @GetMapping(path = "/menu-administrador/agendamientos")
+    @Retry(name = "RetryListingAgendamientos", fallbackMethod = "listingAgendamientosFallback")
     public ResponseEntity<List<Agendamiento>> listarAgendamientos() {
         return new ResponseEntity<>(this.agendamientoService.listAll(), HttpStatus.OK);
     }
 
     @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}/pagados")
+    @Retry(name = "RetryListingPaidsAgendamientos", fallbackMethod = "listingPaidsAgendamientosFallback")
     public ResponseEntity<List<Agendamiento>> listarAgendamientosPagadosPorCliente(@PathVariable String numDocumento) {
         return new ResponseEntity<List<Agendamiento>>(
                 this.agendamientoService.listPagadosByClienteNumDocumento(numDocumento),
                 HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/agendamientos/carritos-de-compras/{carritoId}")
+    @Retry(name = "RetryListingAgendamientosByCarritoDeCompras", fallbackMethod = "listingAgendamientosFallbackByCarritoDeCompras")
+    public ResponseEntity<List<Agendamiento>> listarAgendamientosPorCarritoDeComprasId(
+            @PathVariable("carritoId") String carritoDeComprasId
+    ) {
+        final List<Agendamiento> agendamientos = agendamientoService.listAllByCarritoDeComprasId(carritoDeComprasId);
+        if (agendamientos==null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<List<Agendamiento>>(agendamientos, HttpStatus.OK);
     }
 
     @GetMapping(path = "/menu-asesor/agendamientos/clientes/{numDocumento}/tomados")
@@ -285,27 +288,46 @@ public class EmpleadoController {
                 HttpStatus.OK);
     }
 
+    @CircuitBreaker(name = "clienteIngresosBreaker", fallbackMethod = "clienteIngresosFallback")
     @GetMapping(path = "/menu-asesor/reportes/ingresos/clientes/{numDocumento}")
-    //@CircuitBreaker(name = "clienteIngresosBreaker", fallbackMethod = "clienteIngresosFallback")
     public ResponseEntity<Map<String, Object>> buscarClienteIngresos(
-            @PathVariable("numDocumento") String clienteNumDocumento) {
+            @PathVariable("numDocumento") String clienteNumDocumento
+    ) {
         final Map<String, Object> map = new HashMap<>();
-        // Hayamos el cliente por su número de documento y lo asignamos en el objeto map
-        // por separado de la lista de ingresos
+        /* Hayamos el cliente por su número de documento y lo asignamos en el objeto map
+        por separado de la lista de ingresos*/ 
         final Cliente cliente = clienteService.getCliente(clienteNumDocumento);
         map.put("cliente", cliente);
 
-        List<Ingreso> ingresosList;
-        ingresosList = List.of();
+        List<Factura> facturasList = new ArrayList<Factura>();
         try {
-            ingresosList = ingresoService.searchByClienteNumDocumento(clienteNumDocumento);
+            facturasList = facturaService
+                .listPagadasByClienteNumDocumento(cliente.getNum_documento());
         } catch (Exception e) {
-            throw new RuntimeException("Se ha enviado un mensaje en el respaldo a fallo de la funcionalidad");
+            throw new RuntimeException(e.getMessage());
+        }
+        
+        List<Ingreso> ingresosList = new ArrayList<Ingreso>();
+        List<Agendamiento> fAgendamientos;
+        for (int i=0; i < facturasList.size(); i++) {   /*
+            * Obtengo la lista de los agendamientos de la actual factura de la iteración median-
+            * te su mismo carrito_de_compras _id y se asigna a una variable */
+            fAgendamientos = agendamientoService
+                    .listAllByCarritoDeComprasId(facturasList.get(i).getCarritoDeComprasId());
+            for (int j=0; j < fAgendamientos.size(); j++) {
+                final Ingreso ingreso;
+                ingreso =  Ingreso.builder()
+                        .facturaId(facturasList.get(i).getFacturaId())
+                        .fechaHoraDelServicio(fAgendamientos.get(j).getFechaHora())
+                        .servicioId(fAgendamientos.get(j).getServicioId())
+                        .build();
+                ingresosList.add(ingreso);
+            }
         }
 
         for (Ingreso ingreso : ingresosList) {
-            // Sumamos campos a objeto ingreso actual de la iteración: nombre, precio y url
-            // de Servicio correspondiente al servicioId
+            /* Sumamos campos a objeto ingreso actual de la iteración: nombre, precio y url
+            de Servicio correspondiente al servicioId */
             final Servicio currServicio = servicioService.getOneById(ingreso.getServicioId());
             ingreso.setServicioNombre(currServicio.getServicioNombre());
             ingreso.setServicioPrecio(currServicio.getPrecio());
@@ -316,7 +338,8 @@ public class EmpleadoController {
         return new ResponseEntity<Map<String, Object>>(map, HttpStatus.OK);
     }
 
-    @PostMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicio")
+    @PutMapping(path = "/menu-asesor/solicitudes/clientes/{numDocumento}/reagendar-servicio")
+    @Retry(name = "RetryReagendarServicio", fallbackMethod = "reagendarServicioFallback")
     public ResponseEntity<Agendamiento> reagendarServicio(
             @PathVariable("numDocumento") String clienteNumDocumento,
             @RequestBody Agendamiento agendamiento) {
@@ -335,6 +358,7 @@ public class EmpleadoController {
     }
 
     @DeleteMapping(path = "/menu-asesor/solicitudes/clientes/{clienteNumDocumento}/cancelar-servicios/agendamientos/{agendamientoId}")
+    @Retry(name = "RetryCancelScheduledServicio", fallbackMethod = "cancelScheduledServicioFallback")
     public ResponseEntity<String> cancelarServicioAgendado(
             @PathVariable("clienteNumDocumento") String usuarioClienteNumDocumento,
             @PathVariable("agendamientoId") String agendamientoId) {
@@ -354,8 +378,159 @@ public class EmpleadoController {
         }
     }
 
-    public ResponseEntity<String> clienteIngresosFallback(Short usuarioId, Exception e) {
-        log.info("El respaldo se ejecuta porque el servicio está inactivo o caído: ", e);
-        return new ResponseEntity<String>("Un respaldo a fallo se ha ejecutado", HttpStatus.OK);
+    public ResponseEntity<ApiResponse> retryAddingServicioFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió agregar el servicio, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> schedulingServicioFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió agendar el Servicio de Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> listingServiciosFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió listar los servicios del Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> updatingServicioFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió modificar el Servicio de Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> deletingServicioFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió eliminar el Servicio de Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> servicioByNameQueryFallback(Exception e) {
+        log.info("Calling server no available, this message was printed as fallback", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió obtener el Servicio de Spa por su nombre, posiblemente el servidor llamado estácaído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> listingAgendamientosFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió listar los agendamientos en el Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> listingPaidsAgendamientosFallback(Exception e) {
+        log.info("Calling 'AGENDAMIENTO-APP' microservice is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió listar los agendamientos pagos en el Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> listingAgendamientosFallbackByCarritoDeCompras(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió listar agendamientos por id de Carrito de compras, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> reagendarServicioFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió reagendar el Servicio de Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> cancelScheduledServicioFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió cancelar el Servicio de Spa agendado, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> clienteIngresosFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió obtener los ingresos de Spa por cliente, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
     }
 }

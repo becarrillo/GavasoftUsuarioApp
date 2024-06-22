@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -14,10 +12,8 @@ import java.util.List;
 public class Carrito {
     private String carritoId;
     private int subtotal;
-    private List<Agendamiento> agendamientosList;
 
-    public Carrito(String carritoId, int subtotal) {
-        this.carritoId = carritoId;
+    public Carrito(int subtotal) {
         this.subtotal = subtotal;
     }
 }

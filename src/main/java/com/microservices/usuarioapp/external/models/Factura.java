@@ -6,7 +6,6 @@ import lombok.Setter;
 
 import java.sql.Date;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -15,6 +14,7 @@ public class Factura {
     private String clienteNumDocumento;
     @Setter private Short iva;
     @Setter private int total;
+    @Setter private String conceptoDePago;
     @Setter private byte estadoDePago;
     @Setter private Date fechaDePago;
     private String metodoDePago;
@@ -23,29 +23,28 @@ public class Factura {
 
     public Factura(
             String clienteNumDocumento,
+            String conceptoDePago,
             String metodoDePago,
             String carritoDeComprasId
     ) {
         this.clienteNumDocumento = clienteNumDocumento;
+        this.conceptoDePago = conceptoDePago;
+        this.estadoDePago = 0;
         this.metodoDePago = metodoDePago;
         this.carritoDeComprasId = carritoDeComprasId;
     }
 
     public Factura(
             int facturaId,
-            String clienteTipoDocumento,
             String clienteNumDocumento,
-            Short iva,
-            int total,
-            byte estadoDePago,
+            String conceptoDePago,
             String metodoDePago,
             String carritoDeComprasId
     ) {
         this.facturaId = facturaId;
         this.clienteNumDocumento = clienteNumDocumento;
-        this.iva = iva;
-        this.total = total;
-        this.estadoDePago = estadoDePago;
+        this.conceptoDePago = conceptoDePago;
+        this.estadoDePago = 0;
         this.metodoDePago = metodoDePago;
         this.carritoDeComprasId = carritoDeComprasId;
     }

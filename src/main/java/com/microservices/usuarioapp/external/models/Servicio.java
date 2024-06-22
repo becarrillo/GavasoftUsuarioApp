@@ -3,7 +3,6 @@ package com.microservices.usuarioapp.external.models;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import java.sql.Time;
 
 @Getter
 @Setter
@@ -12,15 +11,15 @@ public class Servicio {
     private String servicioId;
     private String servicioNombre;
     private String descripcion;
-    private Time duracion;
-    private Integer precio;
+    private short duracion;
+    private int precio;
     private String imgUrl;
 
     public Servicio(
             String servicioNombre,
             String descripcion,
-            Time duracion,
-            Integer precio,
+            short duracion,
+            int precio,
             String imgUrl
     ) {
         this.servicioNombre = servicioNombre;

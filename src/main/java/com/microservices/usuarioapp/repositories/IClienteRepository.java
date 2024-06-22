@@ -13,6 +13,7 @@ public interface IClienteRepository {
     Cliente findOneByUsuarioId(Short usuarioId);
     Short findUsuarioClienteIdByNumDocumento(String numDocumento);
     String getClienteNumDocumentoByUsuarioId(Short usuarioClienteId);
+    Integer getClienteSaldoFavor(String clienteNumDocumento);
     String getClienteTipoDocumentoByUsuarioId(Short usuarioClienteId);
     String getClienteNombreByUsuarioId(Short usuarioClienteId);
     String getClienteApellidosByUsuarioId(Short usuarioClienteId);

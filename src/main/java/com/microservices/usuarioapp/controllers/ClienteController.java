@@ -2,21 +2,28 @@ package com.microservices.usuarioapp.controllers;
 import com.microservices.usuarioapp.exceptions.ResourceNotFoundException;
 import com.microservices.usuarioapp.external.models.*;
 import com.microservices.usuarioapp.external.services.*;
+import com.microservices.usuarioapp.responses.ApiResponse;
+
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import com.microservices.usuarioapp.entities.Cliente;
 import com.microservices.usuarioapp.services.ClienteService;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+
 @RestController
-@CrossOrigin(origins="http://localhost:4200", maxAge = 540L)
+@CrossOrigin(origins="https://gavasoft.firebaseapp.com", maxAge = 540L)
 @RequestMapping("/v1/usuarios/clientes")
 @Slf4j
 public class ClienteController {
@@ -38,10 +45,8 @@ public class ClienteController {
     @Autowired
     private FacturaService facturaService;
 
-    @PostMapping(path = "/registro/nuevo")
-    public ResponseEntity<String> crearCuenta(@RequestBody() Cliente cliente) {
-        //final HttpHeaders responseHeaders = new HttpHeaders();
-        //responseHeaders.set("Access-Control-Allow-Origin", "http://localhost:4200");
+    @PostMapping(path = "/crear-cuenta/nuevo")
+    public ResponseEntity<String> crearCuentaCliente(@RequestBody() Cliente cliente) {
         try {
             return new ResponseEntity<>(
                     "Se insertaron con éxito "+clienteService.save(cliente)+" registro(s) de cliente(s)",
@@ -52,8 +57,18 @@ public class ClienteController {
         }
     }
 
-    @PostMapping(path = "/{clienteNumDocumento}/modificar")
-    public ResponseEntity<String> modificarCuenta(
+    @GetMapping(path = "/{numDocumento}")
+    public ResponseEntity<Cliente> consultarCliente(@PathVariable("numDocumento") String clienteNumDocumento) {
+        final Cliente cliente = clienteService.getOne(clienteNumDocumento);
+
+        if (cliente == null) {
+            throw new ResourceNotFoundException("El cliente no existe");
+        }
+        return new ResponseEntity<>(cliente, HttpStatus.OK);
+    }
+
+    @PutMapping(path = "/{clienteNumDocumento}/modificar")
+    public ResponseEntity<String> modificarCuentaCliente(
             @PathVariable("clienteNumDocumento") String numDocumento,
             @RequestBody Cliente cliente
     ) {
@@ -82,17 +97,27 @@ public class ClienteController {
         return clienteService.getClienteNombreByUsuarioId(usuarioClienteId);
     }
 
-    @GetMapping(path = "/obtener-usuario-id/{clienteNumDocumento}")
+    @GetMapping(path = "/{clienteNumDocumento}/obtener-usuario-id")
     public Short obtenerUsuarioClienteIdByNumDocumento(@PathVariable String clienteNumDocumento) {
         return clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento);
     }
 
-    @GetMapping(path = "/servicios")
-    public ResponseEntity<List<Servicio>> consultarServicios() {
+    @GetMapping(path = "/listar")
+        public ResponseEntity<List<Cliente>> listarClientes() {
+            return new ResponseEntity<List<Cliente>>(
+                clienteService.listAllClientes(),
+                HttpStatus.OK
+            );
+        }
+
+    @GetMapping(path = "/listar-servicios")
+    @Retry(name = "RetryListingServicios", fallbackMethod = "listingServiciosFallback")
+    public ResponseEntity<List<Servicio>> listarServicios() {
         return new ResponseEntity<List<Servicio>>(servicioService.getAll(), HttpStatus.OK);
     }
 
     @PostMapping(path = "/valoraciones/servicios/{servicioId}/agregar/nueva")
+    @Retry(name = "RetryValoratingServicio", fallbackMethod = "valoratingServicioFallback")
     public ResponseEntity<String> valorarServicio(
             @PathVariable("servicioId") String servicioId,
             @RequestBody Valoracion valoracion
@@ -102,19 +127,21 @@ public class ClienteController {
     }
 
     @DeleteMapping(path = "/valoraciones/{servicioValoracionId}/eliminar")
+    @Retry(name = "RetryDeletingServicio", fallbackMethod = "deletingServicioFallback")
     public ResponseEntity<String> eliminarValoracionDeServicio(@PathVariable("servicioValoracionId") String servicioValoracionId) {
         final String bodyRes = valoracionService.deleteOneById(servicioValoracionId);
         return new ResponseEntity<String>(bodyRes, HttpStatus.OK);
     }
 
-    @PostMapping(path = "/solicitudes/consultar-agenda/agendar-servicio")
+    @PostMapping(path = "/solicitudes/agendar-servicio")
+    @CircuitBreaker(name = "SchedulingServicioCircuitBreaker", fallbackMethod = "schedulingServicioFallback")
     public ResponseEntity<Agendamiento> agendarServicio(@RequestBody Agendamiento agendamiento) {
-        final String carritoDeComprasId = agendamientoService.getCarritoDeComprasIdByUsuarioClienteId(agendamiento.getUsuarioClienteId());
+        final Carrito foundCarrito = carritoService.getOne(agendamiento.getCarritoDeComprasId());
         // Se verifica la NO existencia de un agendamiento con estado "tomado" del cliente (NO pertenece a algún Carrito)
-        if (carritoDeComprasId == null) {
+        if (foundCarrito == null) {
             agendamiento.setCarritoDeComprasId(carritoService.create()); // Se asocia el agendamiento a instancia nueva de Carrito
         } else {
-            agendamiento.setCarritoDeComprasId(carritoDeComprasId);
+            agendamiento.setCarritoDeComprasId(foundCarrito.getCarritoId());
         }
         final Agendamiento newAgendamiento;
 
@@ -136,6 +163,7 @@ public class ClienteController {
     @DeleteMapping(
             path="/menu-cliente/historial-compras/clientes/{clienteNumDocumento}/agendamientos/{agendamientoId}/cancelar"
     )
+    @Retry(name = "RetryCancelPaidServicio", fallbackMethod = "cancelPaidServicioFallback")
     public ResponseEntity<String> cancelarServicioPago(
             @PathVariable("clienteNumDocumento") String clienteNumDocumento,
             @PathVariable("agendamientoId") String agendamientoId
@@ -156,58 +184,157 @@ public class ClienteController {
             final Agendamiento cancelled = agendamientoService.cancelOnePaidById(agendamientoId);
             return new ResponseEntity<String>("Servicio cancelado en agendamiento '"+cancelled.toString().concat("'"), HttpStatus.OK);
         } else {
-            throw new RuntimeException("El agendamiento del servicio de Spa podría estar sin pago, estar dentro de 24 horas antes o no existir");
+            throw new RuntimeException(
+                "El agendamiento del servicio de Spa podría estar sin pago, estar dentro de 24 horas antes o no existir"
+            );
         }
     }
 
-    @GetMapping(path = "/{usuarioClienteId}/carrito-de-compras")
-    public ResponseEntity<Carrito> consultarCarritoDeComprasPorUsuarioClienteId(
-            @PathVariable Short usuarioClienteId
+    @GetMapping(path = "/{clienteNumDocumento}/carrito-de-compras")
+    public ResponseEntity<Carrito> consultarCarritoDeComprasPorClienteNumDocumento(
+            @PathVariable String clienteNumDocumento
     ) {
         /*
             Cada agendamiento: cuando su estado es "tomado" por defecto, le pertenece a
             un carrito de compras antes de ser cambiado a "facturado". Por lo que el usua-
             rio tendrá siempre disponible un solo carrito de compras al agregar ítems
         */
-        final List<Agendamiento> agendamientosTomados = agendamientoService
-                .listByUsuarioClienteId(usuarioClienteId)
-                .stream()
-                .filter(at -> at.getEstado().equals("tomado"))
-                .toList();
-        if (agendamientosTomados.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        final Agendamiento firstTomadoAgendamiento = agendamientosTomados.get(0);
-        final Carrito foundCarrito = carritoService.getOne(firstTomadoAgendamiento.getCarritoDeComprasId());
-        foundCarrito.setAgendamientosList(agendamientosTomados);
+        final Carrito foundCarrito;
 
-        return new ResponseEntity<Carrito>(
+        try {
+            foundCarrito = carritoService.getOne(
+                agendamientoService
+                    .getCarritoDeComprasIdByUsuarioClienteId(
+                        clienteService.getUsuarioClienteIdByNumDocumento(clienteNumDocumento)
+                    )
+            );
+            return new ResponseEntity<Carrito>(
                 foundCarrito,
                 HttpStatus.OK
-        );
+            );
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
+
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @PostMapping(path = "/{usuarioClienteId}/facturas/generar-nueva")
-    public ResponseEntity<Factura> generarFactura(@PathVariable Short usuarioClienteId, @RequestBody Factura factura) {
+    @PostMapping(path = "/facturas/generar-nueva")
+    @CircuitBreaker(name = "GeneratingFacturaCircuitBreaker", fallbackMethod = "generatingFacturaFallback")
+    public ResponseEntity<Factura> generarFactura(@RequestBody Factura factura) {
+        final Short PORCENTAJEIVA = 19;   // Definición de porcentaje de IVA
+        ResponseEntity<Factura> res = new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        
         try {
-            final Factura generatedFactura = facturaService.generate(usuarioClienteId, factura);
-            ResponseEntity<Factura> res;
+            final Carrito carrito = carritoService.getOne(factura.getCarritoDeComprasId());
+            if (factura.getConceptoDePago().equals("carrito de compras")) {
+                factura.setIva((short)((short)(carrito.getSubtotal()) * PORCENTAJEIVA / 100));
+                factura.setTotal(carrito.getSubtotal() + ((short)(factura.getIva())));
+            
+                agendamientoService.setEstadoToFacturado(
+                        carrito.getCarritoId()
+                );
+            }
+            AtomicInteger subtotal = new AtomicInteger();
+            if (factura.getConceptoDePago().equals("excedente")) {   
+                agendamientoService
+                    .listAllByCarritoDeComprasId(carrito.getCarritoId())
+                    .forEach(a -> subtotal.set(subtotal.get() + servicioService.getOneById(a.getServicioId()).getPrecio()));
+                final int PREVCARRITOVERSIONTOTAL = subtotal.get() * ((int) PORCENTAJEIVA) / 100;
+                final int NEWCARRITOVERSIONTOTAL = factura.getTotal();
+                
+                // Tomado el total nuevo, se le resta el de la factura previa traída en el Request Body
+                factura.setTotal(NEWCARRITOVERSIONTOTAL - PREVCARRITOVERSIONTOTAL); // Obteniendo excedente e IVA
+                factura.setIva((short) (factura.getTotal() * PORCENTAJEIVA / 100));
+            }
+            final Factura generatedFactura = facturaService.generate(factura);
 
             if (generatedFactura != null) {
-                agendamientoService
-                        .setEstadoToFacturado(
-                                factura.getCarritoDeComprasId()
-                        );
                 res = new ResponseEntity<Factura>(
                         generatedFactura,
                         HttpStatus.CREATED
                 );
-                return res;
             }
-            res = new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            return res;
         } catch (Exception e) {
-            throw e;
+            e.printStackTrace();
         }
+        return res;
+    }
+
+    public ResponseEntity<ApiResponse> listingServiciosFallback(Exception e) {
+        log.info("Calling 'SERVICIO-APP' microservice is fallen or inactive", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió listar los servicios del Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> valoratingServicioFallback(Exception e) {
+        log.info("Calling 'SERVICIO-APP' microservice is fallen or inactive", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió valorar el servicio de Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> deletingServicioFallback(Exception e) {
+        log.info("Calling 'SERVICIO-APP' microservice is fallen or inactive", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió eliminar el Servicio del Spa, posiblemente el servidor llamado está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+    public ResponseEntity<ApiResponse> schedulingServicioFallback(Exception e) {
+        log.info("Any calling microservice is fallen or inactive", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió agendar el Servicio de Spa, alguno de los servidores está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> cancelPaidServicioFallback(Exception e) {
+        log.info("Calling microservice is fallen or inactive", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió cancelar el servicio de Spa, posiblemente un servidor llamado está caído o inactivo")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+
+    public ResponseEntity<ApiResponse> generatingFacturaFallback(Exception e) {
+        log.info("Any calling microservice is fallen or inactive", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió generar la Factura, alguno de los servidores está caído")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
     }
 }

@@ -12,13 +12,13 @@ public class FacturaService {
     @Autowired
     private RestTemplate restTemplate;
 
-    public Factura generate(Short usuarioClienteId, Factura factura) {
-        final String URL = "http://COMPRAS-APP/v1/facturas/usuarios/clientes/{usuarioClienteId}/generar-nueva";
-        return restTemplate.postForObject(URL, factura, Factura.class, usuarioClienteId);
+    public Factura generate(Factura factura) {
+        final String URL = "http://COMPRAS-APP/v1/facturas/generar-nueva";
+        return restTemplate.postForObject(URL, factura, Factura.class);
     }
 
     public List<Factura> listPagadasByClienteNumDocumento(String clienteNumDocumento) {
-        final String URL = "http://COMPRAS-APP/v1/facturas/usuarios/clientes/{clienteNumDocumento}";
+        final String URL = "http://COMPRAS-APP/v1/facturas/clientes/{clienteNumDocumento}/pagadas";
         return restTemplate.getForObject(URL, List.class, clienteNumDocumento);
     }
 }

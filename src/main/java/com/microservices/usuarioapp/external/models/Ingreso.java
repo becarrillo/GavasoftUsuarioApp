@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Ingreso {
     private int facturaId;
     private LocalDateTime fechaHoraDelServicio;

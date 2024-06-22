@@ -2,7 +2,6 @@ package com.microservices.usuarioapp.repositories;
 
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.entities.Usuario;
-import com.microservices.usuarioapp.models.UsuarioRol;
 
 import org.springframework.stereotype.Repository;
 import java.sql.SQLException;
@@ -12,7 +11,7 @@ import java.util.List;
 public interface IEmpleadoRepository {
     Empleado save(Empleado empleado) throws SQLException;
     List<Empleado> listAll();
-    List<UsuarioRol> listOnlyUsuarioRolAllWithRolAsNull();
+    List<Empleado> listOnlyEmpleadosWithRolAsNull();
     Empleado findOne(String numDocumento);
     Empleado findOneByUsuarioId(Short usuarioId);
     Empleado findOneByEmail(String email);

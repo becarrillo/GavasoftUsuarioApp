@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 @Service
+@SuppressWarnings("unchecked")
 public class AgendamientoService {
     @Autowired
     private IClienteRepository iClienteRepository;
@@ -22,7 +23,13 @@ public class AgendamientoService {
     */
     public Agendamiento save(Agendamiento agendamiento) {
         Agendamiento newAgendamiento;
-        if (iClienteRepository.listAll().stream().anyMatch(c -> c.getUsuario_id().equals(agendamiento.getUsuarioClienteId()))) {
+        if (
+            agendamiento.getUsuarioClienteId()==null || 
+            iClienteRepository.listAll().stream()
+                .anyMatch(
+                    c -> c.getUsuario_id().equals(agendamiento.getUsuarioClienteId())
+                )
+        ) {
             newAgendamiento = restTemplate.postForObject(
                     "http://AGENDAMIENTO-APP/v1/agendamientos/agregar/nuevo",
                     agendamiento,
@@ -36,7 +43,7 @@ public class AgendamientoService {
 
     public Agendamiento getOneById(String agendamientoId) {
         return restTemplate.getForObject(
-                "http://AGENDAMIENTO-APP/v1/agendamientos/consultar/{agendamientoId}",
+                "http://AGENDAMIENTO-APP/v1/agendamientos/{agendamientoId}",
                 Agendamiento.class,
                 agendamientoId
         );
@@ -44,7 +51,7 @@ public class AgendamientoService {
 
     public String getCarritoDeComprasIdByUsuarioClienteId(Short usuarioClienteId) {
         return restTemplate.getForObject(
-                "http://AGENDAMIENTO-APP/v1/agendamientos/clientes/{usuarioClienteId}/carrito-de-compras-id",
+                "http://AGENDAMIENTO-APP/v1/agendamientos/filtrar-por-cliente/{usuarioClienteId}/carrito-de-compras-id",
                 String.class,
                 usuarioClienteId
         );
@@ -65,7 +72,7 @@ public class AgendamientoService {
     }
 
     public List<Agendamiento> listAllByCarritoDeComprasId(String carritoDeComprasId) {
-        final String URL = "http://AGENDAMIENTO-APP/v1/agendamientos/carritos-de-compras/{carritoDeComprasId}";
+        final String URL = "http://AGENDAMIENTO-APP/v1/agendamientos/filtrar-por-carrito-de-compras/{carritoDeComprasId}";
         return restTemplate.getForObject(URL, List.class, carritoDeComprasId);
     }
 
@@ -79,7 +86,6 @@ public class AgendamientoService {
        cliente por su número de documento, haciendo un mapeo en los dos gestores de bases de
        datos en cada uno de los microservicios (el de los usuarios y el de los agendamientos)
     */
-    @SuppressWarnings("unchecked")
     public List<Agendamiento> listTomadosByClienteNumDocumento(String numDocumento) {
         final Short usuarioClienteId = iClienteRepository.findUsuarioClienteIdByNumDocumento(numDocumento);
 
