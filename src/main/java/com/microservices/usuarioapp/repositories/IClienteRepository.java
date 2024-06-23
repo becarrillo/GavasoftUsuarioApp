@@ -1,10 +1,8 @@
 package com.microservices.usuarioapp.repositories;
 
 import com.microservices.usuarioapp.entities.Cliente;
-import org.springframework.stereotype.Repository;
 import java.util.List;
 
-@Repository
 public interface IClienteRepository {
     byte save(Cliente cliente);
     short getUsuarioId(String numDocumento);

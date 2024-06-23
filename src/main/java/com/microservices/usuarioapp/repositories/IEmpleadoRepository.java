@@ -3,11 +3,9 @@ package com.microservices.usuarioapp.repositories;
 import com.microservices.usuarioapp.entities.Empleado;
 import com.microservices.usuarioapp.entities.Usuario;
 
-import org.springframework.stereotype.Repository;
 import java.sql.SQLException;
 import java.util.List;
 
-@Repository
 public interface IEmpleadoRepository {
     Empleado save(Empleado empleado) throws SQLException;
     List<Empleado> listAll();
