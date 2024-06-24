@@ -12,9 +12,6 @@ HELP.md
 .springBeans
 .sts4-cache
 
-# environment variables
-src/main/resources/application.yml
-
 ### IntelliJ IDEA ###
 .idea
 *.iws
