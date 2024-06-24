@@ -7,7 +7,7 @@ spring:
     url: jdbc:sqlserver://localhost:1433;database=${MSSQL_SERVER_DBNAME};userName=${MSSQL_SERVER_USER};encrypt=true;connectRetryCount=3;trustServerCertificate=true;
     password: ${MSSQL_SERVER_PASSWORD}
   config:
-    import: optional:configserver:http://localhost:8085
+    import: optional:configserver:http://CONFIG-SERVER:8085
 
 management:
   health:
