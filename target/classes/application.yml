@@ -4,7 +4,7 @@ spring:
   application:
     name: USUARIO-APP
   datasource:
-    url: jdbc:sqlserver://${MSSQL_SERVER_DBNAME}_mssql:1433;database=${MSSQL_SERVER_DBNAME};userName=${MSSQL_SERVER_USER};encrypt=true;connectRetryCount=3;trustServerCertificate=true;
+    url: jdbc:sqlserver://${MSSQL_SERVER_SERVERNAME};database=${MSSQL_SERVER_DBNAME};userName=${MSSQL_SERVER_USER};encrypt=true;connectRetryCount=3;trustServerCertificate=true;
     password: ${MSSQL_SERVER_PASSWORD}
   config:
     import: optional:configserver:http://CONFIG-SERVER:8085
