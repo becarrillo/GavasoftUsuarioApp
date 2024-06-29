@@ -14,7 +14,7 @@ public class ValoracionService {
 
     public String save(String servicioId, Valoracion valoracion) {
         return Objects.requireNonNull(restTemplate.postForObject(
-                "http://SERVICIO-APP/v1/valoraciones/servicios/{servicioId}/agregar/nueva",
+                "http://servicio-app.railway.internal:8082/v1/valoraciones/servicios/{servicioId}/agregar/nueva",
                 valoracion,
                 Valoracion.class,
                 servicioId
@@ -23,7 +23,7 @@ public class ValoracionService {
 
     public String deleteOneById(String servicioValorarionId) {
         return restTemplate.getForObject(
-                "http://SERVICIO-APP/v1/valoraciones/{servicioValoracionId}/borrar",
+                "http://servicio-app.railway.internal:8082/v1/valoraciones/{servicioValoracionId}/borrar",
                 String.class,
                 servicioValorarionId
         );

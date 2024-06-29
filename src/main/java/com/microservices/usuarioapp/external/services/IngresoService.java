@@ -13,6 +13,6 @@ public class IngresoService {
     private RestTemplate restTemplate;
 
     public List<Ingreso> searchByClienteNumDocumento(String clienteNumDocumento) {
-        return restTemplate.getForObject("http://COMPRAS-APP/v1/ingresos/clientes/{clienteNumDocumento}", List.class, clienteNumDocumento);
+        return restTemplate.getForObject("http://gavasoftcomprasapp.railway.internal:8084/v1/ingresos/clientes/{clienteNumDocumento}", List.class, clienteNumDocumento);
     }
 }
