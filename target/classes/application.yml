@@ -1,0 +1,61 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: USUARIO-APP
+  datasource:
+    url: jdbc:sqlserver://abadodmssql.database.windows.net;portNumber=1433;database=abadod_usuarios;encrypt=true;connectRetryCount=3;trustServerCertificate=true;
+    username: ${MSSQL_SERVER_USER}
+    password: ${MSSQL_SERVER_PASSWORD}
+  config:
+    import: optional:configserver:https://config-server-production-e0ea.up.railway.app
+  profiles:
+    active: prod
+
+management:
+  health:
+    show-details: always
+    circuitbreaker:
+      enabled: true
+    ratelimiter:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failure-rate-threshold: 35
+        minimum-number-of-calls: 4
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 7s
+        permitted-number-of-calls-in-half-open-state: 3
+        registerHealthIndicator: true
+        sliding-window-size: 50
+        sliding-window-type: count_based
+  retry:
+    instances:
+      RetryAddingServicio:
+        max-attempts: 3
+        wait-duration: 1s
+      RetryServicioByNameQuery:
+        max-attempts: 3
+        wait-duration: 1s
+      RetryListingServicios:
+        max-attempts: 2
+        wait-duration: 1s
+      RetryValoratingServicio:
+        max-attempts: 3
+        wait-duration: 2s
+      RetryDeletingServicio:
+        max-attempts: 3
+        wait-duration: 1s
+      RetryCancelPaidServicio:
+        max-attempts: 3
+        wait-duration: 2s
+      RetryUpdatingServicio:
+        max-attempts: 3
+        wait-duration: 1s
+    metrics:
+      legacy:
+        enabled: true
+      enabled: true
