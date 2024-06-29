@@ -7,6 +7,9 @@ spring:
     url: jdbc:sqlserver://abadodmssql.database.windows.net;portNumber=1433;database=abadod_usuarios;encrypt=true;connectRetryCount=3;trustServerCertificate=true;
     username: ${MSSQL_SERVER_USER}
     password: ${MSSQL_SERVER_PASSWORD}
+  cloud:
+    config:
+      enabled: false
 
 eureka:
   instance:
