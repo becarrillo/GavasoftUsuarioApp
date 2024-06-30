@@ -46,10 +46,10 @@ resilience4j:
         max-attempts: 3
         wait-duration: 1s
       RetryServicioByNameQuery:
-        max-attempts: 3
+        max-attempts: 2
         wait-duration: 1s
       RetryListingServicios:
-        max-attempts: 2
+        max-attempts: 3
         wait-duration: 1s
       RetryValoratingServicio:
         max-attempts: 3
