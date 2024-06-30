@@ -17,20 +17,20 @@ public class ServicioService {
         para la comunicación desde el presente proyecto
     */
     public Servicio save(Servicio servicio) {
-        return restTemplate.postForObject("http://SERVICIO-APP/v1/servicios/agregar/nuevo", servicio, Servicio.class);
+        return restTemplate.postForObject("http://servicio-app.railway.internal:8082/v1/servicios/agregar/nuevo", servicio, Servicio.class);
     }
 
     public Servicio getOne(String servicioName) {
-        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/consultar-por-nombre/"+servicioName, Servicio.class);
+        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/consultar-por-nombre/"+servicioName, Servicio.class);
     }
 
     public Servicio getOneById(String servicioId){
-        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/"+servicioId, Servicio.class);
+        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/"+servicioId, Servicio.class);
     }
 
     @SuppressWarnings("unchecked")
     public List<Servicio> getAll() {
-        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios", List.class);
+        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios", List.class);
     }
 
     public Servicio updateOne(String servicioNombre, com.microservices.usuarioapp.external.models.Servicio servicio) {
@@ -45,7 +45,7 @@ public class ServicioService {
 
     public String deleteOneById(String servicioId) {
         final String id = servicioId;
-        return restTemplate.getForObject("http://SERVICIO-APP/v1/servicios/{id}/eliminar", String.class, id);
+        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/{id}/eliminar", String.class, id);
     }
 
 }

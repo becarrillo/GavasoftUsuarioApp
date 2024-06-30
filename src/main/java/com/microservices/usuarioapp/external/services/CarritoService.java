@@ -16,12 +16,12 @@ public class CarritoService {
 
     public String addSubtotal(String carritoDeComprasId, String servicioId) {  // servicioId es el del agendamiento en el carrito
         final Integer agendamientoSubtotal = restTemplate.getForObject(
-                "http://COMPRAS-APP/v1/servicios/{servicioId}/precio",
+                "http://gavasoftcomprassapp.railway.internal:8084/v1/servicios/{servicioId}/precio",
                 Integer.class,
                 servicioId
         );
         return restTemplate.postForObject(
-                "http://COMPRAS-APP/v1/carritos-de-compras/{carritoDeComprasId}/agregar/item",
+                "http://gavasoftcomprassapp.railway.internal:8084/v1/carritos-de-compras/{carritoDeComprasId}/agregar/item",
                 agendamientoSubtotal.intValue(),
                 String.class,
                 carritoDeComprasId
@@ -29,6 +29,6 @@ public class CarritoService {
     }
 
     public Carrito getOne(String carritoId) {
-        return restTemplate.getForObject("http://COMPRAS-APP/v1/carritos-de-compras/{carritoId}", Carrito.class, carritoId);
+        return restTemplate.getForObject("http://gavasoftcomprassapp.railway.internal:8084/v1/carritos-de-compras/{carritoId}", Carrito.class, carritoId);
     }
 }
