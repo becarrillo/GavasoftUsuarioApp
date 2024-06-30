@@ -11,7 +11,7 @@ public class CarritoService {
     private RestTemplate restTemplate;
 
     public String create() {
-        return restTemplate.postForObject("http://gavasoftcomprasapp.railway.internal:8084/v1/carritos-de-compras/crear/nuevo", new Carrito(), String.class);
+        return restTemplate.postForObject("http://gavasoftcomprasapp/v1/carritos-de-compras/crear/nuevo", new Carrito(), String.class);
     }
 
     public String addSubtotal(String carritoDeComprasId, String servicioId) {  // servicioId es el del agendamiento en el carrito
@@ -21,7 +21,7 @@ public class CarritoService {
                 servicioId
         );
         return restTemplate.postForObject(
-                "http://gavasoftcomprasapp.railway.internal:8084/v1/carritos-de-compras/{carritoDeComprasId}/agregar/item",
+                "http://gavasoftcomprasapp/v1/carritos-de-compras/{carritoDeComprasId}/agregar/item",
                 agendamientoSubtotal.intValue(),
                 String.class,
                 carritoDeComprasId
@@ -29,10 +29,10 @@ public class CarritoService {
     }
 
     public Carrito getOne(String carritoId) {
-        return restTemplate.getForObject("http://gavasoftcomprasapp.railway.internal:8084/v1/carritos-de-compras/{carritoId}", Carrito.class, carritoId);
+        return restTemplate.getForObject("http://gavasoftcomprasapp/v1/carritos-de-compras/{carritoId}", Carrito.class, carritoId);
     }
 
     public void deleteOne(String carritoId) {
-        restTemplate.delete("http://gavasoftcomprasapp.railway.internal:8084/v1/carritos-de-compras/{carritoId}/cancelar", carritoId);
+        restTemplate.delete("http://gavasoftcomprasapp/v1/carritos-de-compras/{carritoId}/cancelar", carritoId);
     }
 }
