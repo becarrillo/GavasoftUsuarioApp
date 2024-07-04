@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -46,6 +47,14 @@ public class AgendamientoService {
                 "http://agendamiento-app.railway.internal:8083/v1/agendamientos/{agendamientoId}",
                 Agendamiento.class,
                 agendamientoId
+        );
+    }
+
+    public Agendamiento getOneByFechaHora(LocalDateTime fechaHora)  {
+        return restTemplate.getForObject(
+                "http://agendamiento-app.railway.internal:8083/v1/agendamientos/consultar-por-fecha-hora/{fechaHora}",
+                Agendamiento.class,
+                fechaHora
         );
     }
 
@@ -128,15 +137,4 @@ public class AgendamientoService {
     public List<Agendamiento> listByUsuarioClienteId(Short usuarioClienteId) {
         return restTemplate.getForObject("http://agendamiento-app.railway.internal:8083/v1/filtrar-por-cliente/{usuarioClienteId}", List.class, usuarioClienteId);
     }
-
-    /*public void reagendarServicio(String agendamientoId, Agendamiento agendamiento) {
-        agendamiento.setAgendamientoId(agendamientoId);
-
-        producer.send("Agendamientos-Queue", "Reagendar Servico" +
-                "io");
-
-        log.info("Mensaje '{}' enviado con éxito a AGENDAMIENTO-APP en espera de respuesta");
-    }
-
-     */
 }

@@ -44,7 +44,7 @@ resilience4j:
     instances:
       RetryAddingServicio:
         max-attempts: 3
-        wait-duration: 1s
+        wait-duration: 2s
       RetryServicioByNameQuery:
         max-attempts: 2
         wait-duration: 1s
@@ -57,6 +57,9 @@ resilience4j:
       RetryDeletingServicio:
         max-attempts: 3
         wait-duration: 1s
+      RetryQueryAgendamientoByDateTime:
+        max-attempts: 2
+        wait-duration: 2s
       RetryCancelPaidServicio:
         max-attempts: 3
         wait-duration: 2s

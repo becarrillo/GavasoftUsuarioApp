@@ -20,12 +20,12 @@ public class ServicioService {
         return restTemplate.postForObject("http://servicio-app.railway.internal:8082/v1/servicios/agregar/nuevo", servicio, Servicio.class);
     }
 
-    public Servicio getOne(String servicioName) {
-        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/consultar-por-nombre/"+servicioName, Servicio.class);
+    public Servicio getOne(String servicioNombre) {
+        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/consultar-por-nombre/{servicioNombre}", Servicio.class, servicioNombre);
     }
 
     public Servicio getOneById(String servicioId){
-        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/"+servicioId, Servicio.class);
+        return restTemplate.getForObject("http://servicio-app.railway.internal:8082/v1/servicios/{servicioId}", Servicio.class, servicioId);
     }
 
     @SuppressWarnings("unchecked")
@@ -36,7 +36,7 @@ public class ServicioService {
     public Servicio updateOne(String servicioNombre, com.microservices.usuarioapp.external.models.Servicio servicio) {
         final String name = servicioNombre;
         return restTemplate.postForObject(
-                "http://SERVICIO-APP/v1/servicios/{name}/modificar",
+                "http://servicio-app.railway.internal:8082/v1/servicios/{name}/modificar",
                 servicio,
                 Servicio.class,
                 name

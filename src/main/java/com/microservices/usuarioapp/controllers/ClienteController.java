@@ -158,6 +158,15 @@ public class ClienteController {
         carritoService.addSubtotal(newAgendamiento.getCarritoDeComprasId(), newAgendamiento.getServicioId());
         return new ResponseEntity<Agendamiento>(newAgendamiento, HttpStatus.CREATED);
     }
+    
+    @GetMapping(path = "/menu-cliente/agendamientos/consultar-por-fecha-hora/{fechaHora}")
+    @Retry(name = "RetryQueryAgendamientoByDateTime", fallbackMethod = "queryAgendamientoByDateTimeFallback")
+    public ResponseEntity<Agendamiento> obtenerAgendamientoPorFechaHora(@PathVariable LocalDateTime fechaHora) {
+        return new ResponseEntity<Agendamiento>(
+                this.agendamientoService.getOneByFechaHora(fechaHora),
+                HttpStatus.OK
+        );
+    }
 
     // Lo que se cancela es el Agendamiento, aunque el Servicio es lo que se compra en el Spa
     @DeleteMapping(
@@ -319,6 +328,19 @@ public class ClienteController {
                 .builder()
                 .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                 .message("Un fallo no permitió cancelar el servicio de Spa, posiblemente un servidor llamado está caído o inactivo")
+                .success(false)
+                .build(),
+            HttpStatus.OK
+        );
+    }
+    
+    public ResponseEntity<ApiResponse> queryAgendamientoByDateTimeFallback(Exception e) {
+        log.info("Calling server is fallen perhaps", e);
+        return new ResponseEntity<ApiResponse>(
+            ApiResponse
+                .builder()
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .message("Un fallo no permitió obtener el agendamiento por su fecha-hora, posiblemente el servidor llamado está caído")
                 .success(false)
                 .build(),
             HttpStatus.OK

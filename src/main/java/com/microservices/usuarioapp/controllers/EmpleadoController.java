@@ -133,9 +133,15 @@ public class EmpleadoController {
 
     @GetMapping(path = "/menu-administrador/admin-empleados/consultar/por-nombre/{empleadoNombre}")
     public ResponseEntity<List<Empleado>> listarEmpleadosPorNombre(@PathVariable String empleadoNombre) {
+        final String decodedEmpleadoNombre = URLDecoder.decode(
+                empleadoNombre.replace('+', ' '),
+                StandardCharsets.UTF_8
+        );
+
         return new ResponseEntity<List<Empleado>>(
-                empleadoService.getEmpleadosByNombre(empleadoNombre),
-                HttpStatus.OK);
+                empleadoService.getEmpleadosByNombre(decodedEmpleadoNombre),
+                HttpStatus.OK
+        );
     }
 
     @GetMapping(path = "/menu-administrador/admin-empleados/listar/sin-rol")
