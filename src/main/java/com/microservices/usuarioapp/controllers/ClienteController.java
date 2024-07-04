@@ -23,7 +23,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 
 @RestController
-@CrossOrigin(origins="https://gavasoft.firebaseapp.com", maxAge = 540L)
+@CrossOrigin(origins="https://adso-sena-astin-gavasoft.firebaseapp.com", maxAge = 540L)
 @RequestMapping("/v1/usuarios/clientes")
 @Slf4j
 public class ClienteController {

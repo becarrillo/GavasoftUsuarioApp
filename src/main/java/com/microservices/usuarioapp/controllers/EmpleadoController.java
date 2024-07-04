@@ -33,7 +33,7 @@ import java.util.*;
 import org.springframework.http.HttpHeaders;
 
 @RestController
-@CrossOrigin(origins = "https://gavasoft.firebaseapp.com", maxAge = 540L)
+@CrossOrigin(origins = "https://adso-sena-astin-gavasoft.firebaseapp.com", maxAge = 540L)
 @RequestMapping(path = "/v1/usuarios/empleados")
 @Slf4j
 public class EmpleadoController {
